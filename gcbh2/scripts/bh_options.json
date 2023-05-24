@@ -6,7 +6,7 @@
   "input_traj": "input.traj",
   "model_file": "./models/mdbh_1.pth",
   "chemical_potential": "./chemical_potentials.dat",
-  "atom_order": ["Pt", "H", "Al", "C", "O"],
+  "atom_order": ["Al", "H", "Pt", "C", "O"],
   "lammps_loc": "/ocean/projects/che160019p/santi92/lammps/build/lmp",
   "temperature": 1000,
   "t_nve": 1000

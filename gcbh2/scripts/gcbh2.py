@@ -204,7 +204,7 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.accept_history = (
             []
         )  # a series of 0 and 1, 0 stands for not accpeted, 1 stands for accepted
-        self.max_history = 25  # max length of self.accept_history is 25
+        self.max_history = 1000  # max length of self.accept_history is 25
 
         if not self.restart:
             self.initialize()
@@ -544,7 +544,7 @@ class GrandCanonicalBasinHopping(Dynamics):
         else:
             _int_accept = 0
             self.dumplog("Rejected, F(old)=%.3f F(new)=%.3f\n" % (self.free_energy, Fn))
-            self.reject_steps += 1
+            self.rejected_steps += 1
             # if move_action is not None:
             #     self.update_modifier_weights(name=move_action, action='decrease')
 
