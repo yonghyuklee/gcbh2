@@ -123,7 +123,7 @@ def write_optimize_sh(model_path):
         f.write("python opt.py")
 
 
-def run_bh(model_file, in_opt_file, opt_file, options):
+def run_bh(options):
     filescopied = ["opt.py"]
     name = glob.glob("input.traj")
     slab_clean = read(name[0])
@@ -186,24 +186,18 @@ def run_bh(model_file, in_opt_file, opt_file, options):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--options", type=str, default="./viz_options.json")
+    parser.add_argument("--options", type=str, default="./bh_options.json")
     args = parser.parse_args()
     with open(args.options) as f:
         options = json.load(f)
     model_file = options["model_file"]
-    in_opt_file = options["in_opt_file"]
-    opt_file = options["opt_file"]
     atom_order = options["atom_order"]
     lammps_loc = options["lammps_loc"]
 
     write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
     write_lammps_input_file(model_path=model_file, atom_order=atom_order)
     write_optimize_sh(model_path=model_file)
-    run_bh(
-        model_file=model_file,
-        in_opt_file=in_opt_file,
-        opt_file=opt_file,
-    )
+    run_bh(options)
 
 
 main()
