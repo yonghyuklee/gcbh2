@@ -231,6 +231,7 @@ class GrandCanonicalBasinHopping(Dynamics):
     def initialize(self):
         self.on_optimization = 0
         self.nsteps = 0
+        self.rejected_steps = 0
         self.optimize(self.atoms)
         self.save_current_status()
         self.energy = self.atoms.get_potential_energy()
@@ -278,6 +279,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                 "on_optimization": self.on_optimization,
                 "t_nve": self.t_nve,
                 "modifier_name": "",
+                "rejection_rate": 0,
             }
         else:
             info = {
@@ -290,6 +292,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                 "on_optimization": self.on_optimization,
                 "t_nve": self.t_nve,
                 "modifier_name": self.modifier_name,
+                "rejection_rate": self.rejectioned_steps / self.nsteps,
             }
 
         with open(self.fn_status_file, "w") as fp:
@@ -313,6 +316,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             self.no_improvement_step = info["no_improvement_step"]
             self.free_energy_min = info["free_energy_min"]
             self.energy_min = info["energy_min"]
+            self.rejected_steps = int(info["rejection_rate"] * self.nsteps)
             if self.nsteps > 0:
                 self.modifier_name = info["modifier_name"]
             # Temperature and history is collected
@@ -540,6 +544,7 @@ class GrandCanonicalBasinHopping(Dynamics):
         else:
             _int_accept = 0
             self.dumplog("Rejected, F(old)=%.3f F(new)=%.3f\n" % (self.free_energy, Fn))
+            self.reject_steps += 1
             # if move_action is not None:
             #     self.update_modifier_weights(name=move_action, action='decrease')
 
