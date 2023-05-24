@@ -77,6 +77,7 @@ def write_opt_file(atom_order, lammps_loc):
         f.write("    atoms.set_constraint(c)\n")
         f.write("    atoms.set_calculator(SPC(atoms, energy=e, forces=f))\n")
         f.write('    atoms.write("optimized.traj")\n')
+        f.write("main()\n")
 
 
 def write_lammps_input_file(model_path, atom_order):
@@ -115,12 +116,12 @@ def write_lammps_input_file(model_path, atom_order):
 
 
 def write_optimize_sh(model_path):
-    with open("in.opt", "w") as f:
+    with open("optimize.sh", "w") as f:
         f.write("pwd\n")
-        f.write("cp {} .".format(model_path))
-        f.write("cp ../../in.opt .")
-        f.write("cp ../../opt.py .")
-        f.write("python opt.py")
+        # f.write("cp {} .\n".format(model_path))
+        f.write("cp ../../in.opt .\n")
+        f.write("cp ../../opt.py .\n")
+        f.write("python opt.py\n")
 
 
 def run_bh(options):
