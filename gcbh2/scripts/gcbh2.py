@@ -292,7 +292,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                 "on_optimization": self.on_optimization,
                 "t_nve": self.t_nve,
                 "modifier_name": self.modifier_name,
-                "rejection_rate": self.rejectioned_steps / self.nsteps,
+                "rejection_rate": self.rejected_steps / self.nsteps,
             }
 
         with open(self.fn_status_file, "w") as fp:
