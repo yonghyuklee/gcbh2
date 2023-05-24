@@ -1,0 +1,27 @@
+#input
+units                  metal
+dimension	       3
+processors	       * * *
+box tilt 	       large
+boundary 	       p p f
+
+#real data
+atom_style	       atomic
+read_data	       struc.data
+
+#potential
+pair_style	allegro
+pair_coeff	* * mdbh_1.pth Al H Pt C O
+
+timestep 0.0001
+
+region slab block EDGE EDGE EDGE EDGE 0 5.5
+group fixed_slab region slab
+fix freeze fixed_slab setforce 0.0 0.0 0.0
+dump 1 all custom 1 md.lammpstrj id type x y z fx fy fz
+thermo 1
+thermo_style custom step pe fmax
+
+#minimize
+min_modify norm max
+minimize 0.0 0.3 200 100000
