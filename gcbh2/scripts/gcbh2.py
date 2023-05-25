@@ -204,7 +204,10 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.accept_history = (
             []
         )  # a series of 0 and 1, 0 stands for not accpeted, 1 stands for accepted
-        self.max_history = 1000  # max length of self.accept_history is 25
+        self.accept_history_full = (
+            []
+        )  # a series of 0 and 1, 0 stands for not accpeted, 1 stands for accepted
+        self.max_history = 25  # max length of self.accept_history is 25
 
         if not self.restart:
             self.initialize()
@@ -317,6 +320,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             self.free_energy_min = info["free_energy_min"]
             self.energy_min = info["energy_min"]
             self.rejected_steps = int(info["rejection_rate"] * self.nsteps)
+
             if self.nsteps > 0:
                 self.modifier_name = info["modifier_name"]
             # Temperature and history is collected
@@ -328,6 +332,12 @@ class GrandCanonicalBasinHopping(Dynamics):
                 for ii in info["history"].split(","):
                     if ii.isdigit():
                         self.accept_history.append(int(ii))
+
+            if "full_history" in info.keys():
+                for ii in info["full_history"].split(","):
+                    if ii.isdigit():
+                        self.full_history.append(int(ii))
+
             if "on_optimization" in info.keys():
                 self.on_optimization = info["on_optimization"]
 
@@ -557,6 +567,7 @@ class GrandCanonicalBasinHopping(Dynamics):
 
         # adjust the temperatures
         self.accept_history.append(_int_accept)
+        self.accept_history_full.append(_int_accept)
         if len(self.accept_history) > self.max_history:
             self.accept_history.pop(0)
             _balance = sum(self.accept_history) / float(self.max_history)
