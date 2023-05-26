@@ -1,10 +1,9 @@
 import re, os, json, argparse
+
 import numpy as np
-
-import matplotlib.pyplot as plt
 import seaborn as sns
-
-from ase.io import read, write
+from ase.io import read
+import matplotlib.pyplot as plt
 
 
 def get_e_from_lammps_log(lammps_log):
@@ -21,7 +20,9 @@ def get_e_from_lammps_log(lammps_log):
     return np.array(e_pot)
 
 
-def plot_energy_trajectories(energy_list, delta=False, label_energy=None):
+def plot_energy_trajectories(
+    energy_list, delta=False, label_energy=None, save=False, save_folder=None
+):
     """
     Given a list of lists of energies, plot them
     """
@@ -47,9 +48,15 @@ def plot_energy_trajectories(energy_list, delta=False, label_energy=None):
         plt.legend()
 
     plt.show()
+    if save:
+        final_name = "final_energy" if not delta else "final_energy_delta"
+        file_save = os.path.join(save_folder, "{}.png".format(final_name))
+        plt.savefig(file_save, dpi=300)
 
 
-def plot_hist_final_energy(energy_list, label_energy=None):
+def plot_hist_final_energy(
+    energy_list, label_energy=None, save=False, save_folder=None
+):
     """
     Given a list of energy trajectories, plot the histogram of final energies
     """
@@ -69,7 +76,8 @@ def plot_hist_final_energy(energy_list, label_energy=None):
         lower_count = 0
         for energy in energy_list:
             final_e = energy[-1]
-            if final_e < label_energy:
+
+            if final_e < float(label_energy):
                 lower_count += 1
         print(
             "% trajectories w/ final E < than DFT init E: {:.2f}".format(
@@ -79,6 +87,9 @@ def plot_hist_final_energy(energy_list, label_energy=None):
 
     # plt.hist(energies_final)
     plt.show()
+    if save:
+        file_save = os.path.join(save_folder, "final_energy_hist.png")
+        plt.savefig(file_save, dpi=300)
 
 
 def main():
@@ -146,9 +157,13 @@ def main():
             energy_list.append(e_pot)
             # print("num energies: {}".format(len(e_pot)))
 
-    plot_energy_trajectories(energy_list, delta=True)
-    plot_energy_trajectories(energy_list, delta=False, label_energy=label_energy)
-    plot_hist_final_energy(energy_list, label_energy=label_energy)
+    plot_energy_trajectories(energy_list, delta=True, save=True, save_folder=root)
+    plot_energy_trajectories(
+        energy_list, delta=False, label_energy=label_energy, save=True, save_folder=root
+    )
+    plot_hist_final_energy(
+        energy_list, label_energy=label_energy, save=True, save_folder=root
+    )
 
     if save_best_structs:
         # get top n lowest energy structures
@@ -161,7 +176,9 @@ def main():
 
         for ind, target_index in enumerate(lowest_n_full_indices):
             print(target_index)
-
+            # if folder_save_best_structs doesn't exist, create it
+            if not os.path.exists(folder_save_best_structs):
+                os.makedirs(folder_save_best_structs)
             target_folder = subfolders[target_index[0]]
             opt_traj = os.path.join(target_folder, "opt.traj")
             # write to new folder
@@ -174,6 +191,11 @@ def main():
             atoms_opt = read(opt_traj, index=":")
             atoms_opt[target_index[1]].write(write_path_traj)
             atoms_opt[target_index[1]].write(write_path_xyz)
+            # save dictionary of lowest_full_indices
+            with open(
+                os.path.join(folder_save_best_structs, "lowest_n_indices.json"), "w"
+            ) as f:
+                json.dump(lowest_n_full_indices, f)
 
 
 main()
