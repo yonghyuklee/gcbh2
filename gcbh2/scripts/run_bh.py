@@ -1,3 +1,10 @@
+##########################################################################################
+# this is an example script to run the Grand Canonical Basin Hopping
+# this self-contained script generates the executables to run basin hopping
+# you still need to add the chemical potentials, input.traj, and the bh_options.json
+##########################################################################################
+# generalizations to the code such as general lammmps input file, etc. to come or whatever
+
 import glob, os, sys, json, argparse
 import itertools
 import numpy as np
@@ -172,17 +179,12 @@ def run_bh(options):
     )
     # bh_run.add_modifier(nve_n2p2, name="nve",bond_range=bond_range,  z_fix=6, N=100)
     bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
-    # bh_run.add_modifier(add_molecule_on_cluster, name="add_H", weight=3)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     bh_run.add_modifier(add_H, bond_range=bond_range, max_trial=50, weight=2)
 
     n_steps = 4000
 
-    # while True:
-    # try:
     bh_run.run(n_steps)
-    # except:
-    # print("checking dropped job")
 
 
 def main():

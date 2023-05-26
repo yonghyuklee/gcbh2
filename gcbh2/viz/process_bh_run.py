@@ -135,7 +135,7 @@ def main():
 
                 if save_best_structs:
                     flat_energy_list.append(energy)
-                    flat_force_list.append(force)
+                    flat_force_list.append(forces)
                     index_list.append((folder_ind, index))
 
             e_pot = np.array(e_pot)
