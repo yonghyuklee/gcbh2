@@ -1,8 +1,7 @@
 {
-    "root": "./2/opt_folder/", 
-    "folder_save_best_structs": "./2/best-structs/",
-    "save_best_structs": true, 
-    "label_energy": "-2415.73167791"
-
+  "root": "../../../cluster_pes/bh_v2/rand_start/2_failed_n_large/opt_folder",
+  "folder_save_best_structs": "../../../cluster_pes/bh_v2/rand_start/2_failed_n_large/opt_folder/best-structs/",
+  "save_best_structs": true,
+  "label_energy": "-2439.00648008",
+  "save_last_in_ea_md": true
 }
-  

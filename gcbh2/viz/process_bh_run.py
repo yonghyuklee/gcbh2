@@ -103,6 +103,7 @@ def main():
     root = options["root"]
     folder_save_best_structs = options["folder_save_best_structs"]
     save_best_structs = options["save_best_structs"]
+    save_lowest_per_trajectory = options["save_last_in_ea_md"]
     label_energy = options["label_energy"]
 
     # get all subfolders
@@ -167,19 +168,25 @@ def main():
 
     if save_best_structs:
         # get top n lowest energy structures
-        n = 10
+        n = 100
         # get indices of lowest n energies
         lowest_n_indices = np.argsort(flat_energy_list)[:n]
         # get corresponding indices of subfolders and images
         lowest_n_full_indices = [index_list[i] for i in lowest_n_indices]
-        print(lowest_n_full_indices)
 
         for ind, target_index in enumerate(lowest_n_full_indices):
-            print(target_index)
+            print(
+                "folder ind {} frame {} energy {}".format(
+                    target_index[0],
+                    target_index[1],
+                    flat_energy_list[lowest_n_indices[ind]],
+                )
+            )
             # if folder_save_best_structs doesn't exist, create it
             if not os.path.exists(folder_save_best_structs):
                 os.makedirs(folder_save_best_structs)
             target_folder = subfolders[target_index[0]]
+            # print(target_folder)
             opt_traj = os.path.join(target_folder, "opt.traj")
             # write to new folder
             write_path_traj = os.path.join(
@@ -191,11 +198,42 @@ def main():
             atoms_opt = read(opt_traj, index=":")
             atoms_opt[target_index[1]].write(write_path_traj)
             atoms_opt[target_index[1]].write(write_path_xyz)
+            # add energies to target_index
+            target_index += (flat_energy_list[lowest_n_indices[ind]],)
+            lowest_n_full_indices[ind] = target_index
             # save dictionary of lowest_full_indices
             with open(
                 os.path.join(folder_save_best_structs, "lowest_n_indices.json"), "w"
             ) as f:
                 json.dump(lowest_n_full_indices, f)
+
+    if save_lowest_per_trajectory:
+        for folder_ind, subfolder in enumerate(subfolders):
+            # print(subfolder)
+            # open optimized.traj and opt.traj in each subfolder
+            opt_traj = os.path.join(subfolder, "opt.traj")  # trajectory
+            optimized_traj = os.path.join(subfolder, "optimized.traj")  # final
+            lammps_traj = os.path.join(subfolder, "md.lammpstrj")
+            lammps_log = os.path.join(subfolder, "log.lammps")
+
+            # check that all files exist in subfolder
+            if (
+                os.path.exists(opt_traj)
+                and os.path.exists(lammps_traj)
+                and os.path.exists(lammps_log)
+                and os.path.exists(optimized_traj)
+            ):
+                atoms_opt = read(opt_traj, index="-1")
+                print("final opt energy: {}".format(atoms_opt.get_potential_energy()))
+                folder_number = int(subfolder.split("_")[-1])
+                write_path_traj = os.path.join(
+                    folder_save_best_structs, "last-{}.traj".format(folder_number)
+                )
+                write_path_xyz = os.path.join(
+                    folder_save_best_structs, "last-{}.xyz".format(folder_number)
+                )
+                atoms_opt.write(write_path_traj)
+                atoms_opt.write(write_path_xyz)
 
 
 main()
