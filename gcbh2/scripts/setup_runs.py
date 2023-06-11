@@ -35,7 +35,7 @@ def main():
 
     # find chemical_potential.json in current directory
     chemical_potential_file = [
-        f for f in os.listdir(".") if f.endswith("chemical_potentials.json")
+        f for f in os.listdir(".") if f.endswith("chemical_potentials.dat")
     ][0]
     print("chemical potential file: {}".format(chemical_potential_file))
 
