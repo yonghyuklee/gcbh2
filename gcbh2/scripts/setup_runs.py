@@ -43,6 +43,10 @@ def main():
     run_bh_file = [f for f in os.listdir(".") if f.endswith("run_bh.py")][0]
     print("run_bh file: {}".format(run_bh_file))
 
+    # find *.traj
+    traj_file = [f for f in os.listdir(".") if f.endswith(".traj")][0]
+    print("traj file: {}".format(traj_file))
+
     # find  bh_options.json in current directory
     bh_options_file = [f for f in os.listdir(".") if f.endswith("bh_options.json")][0]
     print("bh_options file: {}".format(bh_options_file))
@@ -52,6 +56,7 @@ def main():
         os.mkdir("run_{}".format(i))
         os.system("cp {} run_{}/run_bh.py".format(run_bh_file, i))
         os.system("cp {} run_{}/bh_options.json".format(bh_options_file, i))
+        os.system("cp {} run_{}/{}".format(traj_file, i, traj_file))
         os.system(
             "cp {} run_{}/{}".format(
                 chemical_potential_file, i, chemical_potential_file
