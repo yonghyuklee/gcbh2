@@ -10,7 +10,7 @@ import itertools
 import numpy as np
 from ase.io import read
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, mirror_mutate, remove_H, add_H, add_h_gas
+from pygcga2 import randomize_all, mirror_mutate, remove_H, add_H, rand_clustering
 
 atom_elem_to_num = {"H": 1, "C": 6, "O": 8, "Al": 13, "Pt": 78}
 
@@ -120,7 +120,26 @@ def write_lammps_input_file(model_path, atom_order):
         f.write("#minimize\n")
         f.write("min_modify norm max\n")
         f.write("minimize 0.0 0.3 200 100000\n")
+def run_ase(options): 
+    """
+    from ase import units
+    from ase.md.langevin import Langevin
+    from ase.io import read, write
+    import numpy as np
+    import time
+    from mace.calculators import MACECalculator
 
+    calculator = MACECalculator(model_path='/content/checkpoints/MACE_model_run-123.model', device='cuda')
+    init_conf = read('BOTNet-datasets/dataset_3BPA/test_300K.xyz', '0')
+    init_conf.set_calculator(calculator)
+
+    dyn = Langevin(init_conf, 0.5*units.fs, temperature_K=310, friction=5e-3)
+    def write_frame():
+            dyn.atoms.write('md_3bpa.xyz', append=True)
+    dyn.attach(write_frame, interval=50)
+    dyn.run(100)
+    """
+    
 
 def write_optimize_sh(model_path):
     with open("optimize.sh", "w") as f:
@@ -146,6 +165,16 @@ def run_bh(options):
         chemical_potential="chemical_potentials.dat",
     )
 
+    bond_range = {
+        ("C", "Pt"): [1.2, 10],
+        ("Pt", "Pt"): [1, 10.0],
+        ("C", "C"): [1.9, 10],
+        ("C", "O"): [0.6, 10],
+        ("Pt", "O"): [1.5, 10],
+        ("O", "O"): [1.9, 10],
+        ("Al", "Al"): [1, 10],
+    }
+
     cell = slab_clean.get_cell()
     a = cell[0, 0]
     b = cell[1, 0]
@@ -155,26 +184,9 @@ def run_bh(options):
         [[-tol, -tol], [a + tol, -tol], [a + b + tol, c + tol], [b - tol, c + tol]]
     )
 
-    # bond_range = {}
-    # for v in itertools.product(["Al", "O", "Pt", "C", "H"], repeat=2):
-    #    bond_range[frozenset(v)] = [1]
-    bond_range = {
-        frozenset(("C", "Pt")): [1.5, 10],
-        frozenset(("Pt", "Pt")): [2.0, 10.0],
-        frozenset(("C", "C")): [0.8, 10],
-        frozenset(("C", "O")): [0.6, 10],
-        frozenset(("Pt", "O")): [1.5, 10],
-        frozenset(("O", "O")): [1.0, 2.0],
-        frozenset(("Al", "Al")): [2.0, 3.5],
-        frozenset(("H", "H")): [0.7, 1.5],
-        frozenset(("H", "Pt")): [1.4, 2.5],
-        frozenset(("H", "C")): [0.7, 1.4],
-        frozenset(("Al", "O")): [1.5, 3.0],
-        frozenset(("Al", "Pt")): [2.1, 3.5],
-        frozenset(("Al", "H")): [1.1, 2.4],
-        frozenset(("Al", "C")): [1.7, 2.5],
-        frozenset(("O", "H")): [0.7, 1.5],
-    }
+    bond_range = {}
+    for v in itertools.product(["Al", "O", "Pt", "C", "H"], repeat=2):
+        bond_range[frozenset(v)] = [1]
 
     bh_run.add_modifier(
         randomize_all,
@@ -182,13 +194,13 @@ def run_bh(options):
         dr=1,
         bond_range=bond_range,
         max_trial=50,
-        weight=0.5,
+        weight=1,
     )
     # bh_run.add_modifier(nve_n2p2, name="nve",bond_range=bond_range,  z_fix=6, N=100)
     bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
-    bh_run.add_modifier(add_H, bond_range=bond_range, max_trial=50, weight=0.5)
-    # bh_run.add_modifier(add_h_gas, bond_range=bond_range, name="add_h2")
-    bh_run.add_modifier(remove_H, name="remove_h", weight=0.5)
+    bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
+    bh_run.add_modifier(add_H, bond_range=bond_range, max_trial=50, weight=2)
+
     n_steps = 4000
 
     bh_run.run(n_steps)
