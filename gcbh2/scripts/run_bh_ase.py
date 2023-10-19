@@ -173,8 +173,8 @@ def write_optimize_sh(model_path):
     with open("optimize.sh", "w") as f:
         f.write("pwd\n")
         # f.write("cp {} .\n".format(model_path))
-        f.write("cp {pwd}/in.opt .\n")
-        f.write("cp {pwd}/opt.py .\n")
+        f.write(f"cp {pwd}/in.opt .\n")
+        f.write(f"cp {pwd}/opt.py .\n")
         f.write("python opt.py\n")
 
 
