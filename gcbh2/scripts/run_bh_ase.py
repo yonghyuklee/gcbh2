@@ -12,114 +12,125 @@ from ase.io import read
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
 from pygcga2 import randomize_all, mirror_mutate, remove_H, add_H, rand_clustering
 
-atom_elem_to_num = {"H": 1, "C": 6, "O": 8, "Al": 13, "Pt": 78}
+# atom_elem_to_num = {"H": 1, "C": 6, "O": 8, "Al": 13, "Pt": 78}
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
 
 
 def write_opt_file(atom_order, lammps_loc):
     # opt.py file
 
     with open("opt.py", "w") as f:
-        f.write("import re\n")
-        f.write("import os\n")
-        f.write("import glob\n")
-        f.write("\n")
-        f.write("from ase.io import *\n")
-        f.write("from ase.io.trajectory import TrajectoryWriter\n")
-        f.write("import numpy as np\n")
-        f.write(
-            "from ase.calculators.singlepoint import SinglePointCalculator as SPC\n"
-        )
-        f.write("from ase.constraints import FixAtoms\n")
-        f.write("from pymatgen.io.lammps.data import LammpsData\n")
-        f.write("from pymatgen.io.ase import AseAtomsAdaptor\n")
-        f.write("def main():\n")
-        f.write('    atoms = read("./input.traj")\n')
-        f.write("    n = len(atoms)\n")
-        f.write("    ase_adap = AseAtomsAdaptor()\n")
-        f.write("    atoms_ = ase_adap.get_structure(atoms)\n")
-        f.write('    ld = LammpsData.from_structure(atoms_, atom_style="atomic")\n')
-        f.write('    ld.write_file("struc.data")\n')
-        f.write("\n")
-        f.write('    os.system("{} < in.opt")\n'.format(lammps_loc))
-        f.write("\n")
-        f.write('    images = read("md.lammpstrj", ":")\n')
-        f.write('    traj = TrajectoryWriter("opt.traj", "a")\n')
-        f.write("\n")
-        f.write('    file_name = glob.glob("log.lammps")[0]\n')
-        f.write("    f = open(file_name, 'r')\n")
-        f.write("    Lines = f.readlines()\n")
-        f.write('    patten = r"(\\d+\\s+\\-+\\d*\\.?\\d+)"\n')
-        f.write("    e_pot = []\n")
-        f.write("    for i, line in enumerate(Lines):\n")
-        f.write("        s = line.strip()\n")
-        f.write("        match = re.match(patten, s)\n")
-        f.write("        if match != None:\n")
-        f.write("            D = np.fromstring(s, sep=' ')\n")
-        f.write("            e_pot.append(D[1])\n")
-        f.write("\n")
-        f.write("    print(len(e_pot))\n")
-        f.write("\n")
-        f.write("    f_all = []\n")
-        f.write("    for atoms in images:\n")
-        f.write("        f = atoms.get_forces()\n")
-        f.write("        f_all.append(f)\n")
-        f.write("\n")
-        f.write("    for i, atoms in enumerate(images):\n")
-        f.write("        an = atoms.get_atomic_numbers()\n")
+        f.write("""import re
+import os
+import glob
+
+from ase.io import *
+from ase.io.trajectory import TrajectoryWriter
+import numpy as np
+from ase.calculators.singlepoint import SinglePointCalculator as SPC
+from ase.constraints import FixAtoms
+from pymatgen.io.lammps.data import LammpsData
+from pymatgen.io.ase import AseAtomsAdaptor
+
+def main():
+    atoms = read("./input.traj")
+    n = len(atoms)
+    ase_adap = AseAtomsAdaptor()
+    atoms_ = ase_adap.get_structure(atoms)
+    ld = LammpsData.from_structure(atoms_, atom_style="atomic")
+    ld.write_file("struc.data")
+
+    os.system("{} < in.opt")\n'.format(lammps_l
+
+    images = read("md.lammpstrj", ":")
+    traj = TrajectoryWriter("opt.traj", "a")
+
+    file_name = glob.glob("log.lammps")[0]
+    f = open(file_name, 'r')
+    Lines = f.readlines()
+    patten = r"(\\d+\\s+\\-+\\d*\\.?\\d+)"
+    e_pot = []
+    for i, line in enumerate(Lines):
+        s = line.strip()
+        match = re.match(patten, s)
+        if match != None:
+            D = np.fromstring(s, sep=' ')
+            e_pot.append(D[1])
+
+    print(len(e_pot))
+
+    f_all = []
+    for atoms in images:
+        f = atoms.get_forces()
+        f_all.append(f)
+
+    for i, atoms in enumerate(images):
+        an = atoms.get_atomic_numbers()
+
+""")
         for ind, atom in enumerate(atom_order):
             f.write(
                 f"        an = [{atom_elem_to_num[atom]} if x == {ind+1} else x for x in an]\n"
             )
-        f.write("\n")
-        f.write("        atoms.set_atomic_numbers(an)\n")
-        f.write("        traj.write(atoms, energy=e_pot[i], forces=f_all[i])\n")
-        f.write("\n")
-        f.write('    atoms = read("opt.traj@-1")\n')
-        f.write("    e = atoms.get_potential_energy()\n")
-        f.write("    f = atoms.get_forces()\n")
-        f.write("    pos = atoms.get_positions()\n")
-        f.write("    posz = pos[:, 2]\n")
-        f.write("    ndx = np.where(posz < 5.5)[0]\n")
-        f.write("    c = FixAtoms(ndx)\n")
-        f.write("    atoms.set_constraint(c)\n")
-        f.write("    atoms.set_calculator(SPC(atoms, energy=e, forces=f))\n")
-        f.write('    atoms.write("optimized.traj")\n')
-        f.write("main()\n")
+        f.write("""
+        atoms.set_atomic_numbers(an)
+        traj.write(atoms, energy=e_pot[i], forces=f_all[i])
+
+    atoms = read("opt.traj@-1")
+    e = atoms.get_potential_energy()
+    f = atoms.get_forces()
+    pos = atoms.get_positions()
+    posz = pos[:, 2]
+    ndx = np.where(posz < 5.5)[0]
+    c = FixAtoms(ndx)
+    atoms.set_constraint(c)
+    atoms.set_calculator(SPC(atoms, energy=e, forces=f))
+    atoms.write("optimized.traj")
+
+main()
+""")
 
 
-def write_lammps_input_file(model_path, atom_order):
+def write_lammps_input_file(model_path, model_label, atom_order):
     """
     Write the lammps input file
     """
     with open("in.opt", "w") as f:
-        f.write("#input \n")
-        f.write("units                  metal\n")
-        f.write("dimension	       3\n")
-        f.write("processors	       * * *\n")
-        f.write("box tilt 	       large\n")
-        f.write("boundary 	       p p f\n")
-        f.write("\n")
-        f.write("#real data\n")
-        f.write("atom_style	       atomic\n")
-        f.write("read_data	       struc.data\n")
-        f.write("\n")
-        f.write("#potential\n")
-        f.write("pair_style	allegro\n")
-        atom_order_str = " ".join(atom_order)
-        f.write(f"pair_coeff	* * {model_path} {atom_order_str}\n")
-        f.write("\n")
-        f.write("timestep 0.0001\n")
-        f.write("\n")
-        f.write("region slab block EDGE EDGE EDGE EDGE 0 5.5\n")
-        f.write("group fixed_slab region slab\n")
-        f.write("fix freeze fixed_slab setforce 0.0 0.0 0.0\n")
-        f.write("dump 1 all custom 1 md.lammpstrj id type x y z fx fy fz\n")
-        f.write("thermo 1\n")
-        f.write("thermo_style custom step pe fmax\n")
-        f.write("\n")
-        f.write("#minimize\n")
-        f.write("min_modify norm max\n")
-        f.write("minimize 0.0 0.3 200 100000\n")
+        f.write("""#input 
+units             metal
+dimension         3
+processors        * * *
+box tilt          large
+boundary          p p f
+
+#real data
+atom_style        atomic
+read_data         slab.data
+
+#potential
+pair_style        quip""")
+        atom_order_str = []
+        for atom in atom_order:
+            atom_order_str.append(atom_elem_to_num[atom])
+        atom_order_str = ' '.join(map(str, atom_order_str))
+        f.write(f"pair_coeff * * {model_path} \"{model_label}\" {atom_order_str}")
+        f.write("""
+timestep 0.0001
+
+# region slab block EDGE EDGE EDGE EDGE 0 5.5
+# group fixed_slab region slab
+# fix freeze fixed_slab setforce 0.0 0.0 0.0
+dump 1 all custom 1 md.lammpstrj id type x y z fx fy fz
+thermo 1
+thermo_style custom step pe fmax
+
+#minimize
+min_modify norm max
+minimize 0.0 0.3 200 100000
+
+""")
+
+
 def run_ase(options): 
     """
     from ase import units
@@ -166,13 +177,12 @@ def run_bh(options):
     )
 
     bond_range = {
-        ("C", "Pt"): [1.2, 10],
-        ("Pt", "Pt"): [1, 10.0],
-        ("C", "C"): [1.9, 10],
-        ("C", "O"): [0.6, 10],
-        ("Pt", "O"): [1.5, 10],
-        ("O", "O"): [1.9, 10],
-        ("Al", "Al"): [1, 10],
+        ("Zr", "Zr"): [1.8, 10],
+        ("Zr", "O"): [1.7, 10],
+        ("Zr", "H"): [1.6, 10],
+        ("O", "O"): [1.0, 10],
+        ("O", "H"): [0.8, 10],
+        ("H", "H"): [0.5, 10],
     }
 
     cell = slab_clean.get_cell()
@@ -185,7 +195,7 @@ def run_bh(options):
     )
 
     bond_range = {}
-    for v in itertools.product(["Al", "O", "Pt", "C", "H"], repeat=2):
+    for v in itertools.product(["Zr", "O", "H"], repeat=2):
         bond_range[frozenset(v)] = [1]
 
     bh_run.add_modifier(
@@ -197,7 +207,7 @@ def run_bh(options):
         weight=1,
     )
     # bh_run.add_modifier(nve_n2p2, name="nve",bond_range=bond_range,  z_fix=6, N=100)
-    bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
+    # bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     bh_run.add_modifier(add_H, bond_range=bond_range, max_trial=50, weight=2)
 

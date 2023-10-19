@@ -4,9 +4,10 @@
   "save_best_structs": true,
   "label_energy": "-2415.73167791",
   "input_traj": "input.traj",
-  "model_file": "./models/mdbh_1.pth",
+  "model_file": "gap.xml",
+  "model_label": "Potential xml_label=GAP_2023_10_13_-420_11_45_33_260",
   "chemical_potential": "./chemical_potentials.dat",
-  "atom_order": ["Al", "H", "Pt", "C", "O"],
+  "atom_order": ["Zr", "O", "H"],
   "lammps_loc": "/ocean/projects/che160019p/santi92/lammps/build/lmp",
   "temperature": 1000,
   "t_nve": 1000
