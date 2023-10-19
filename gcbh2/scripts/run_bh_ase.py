@@ -123,7 +123,8 @@ atom_style        atomic
 read_data         slab.data
 
 #potential
-pair_style        quip""")
+pair_style        quip
+""")
         atom_order_str = []
         for atom in atom_order:
             atom_order_str.append(atom_elem_to_num[atom])
