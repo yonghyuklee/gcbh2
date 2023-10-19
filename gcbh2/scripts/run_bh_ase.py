@@ -31,6 +31,29 @@ from ase.constraints import FixAtoms
 from pymatgen.io.lammps.data import LammpsData
 from pymatgen.io.ase import AseAtomsAdaptor
 
+re_energies = re.compile(\"\"\"^\s*Step \"\"\")
+                
+def lammps_energy(
+                  logfile,
+                  ):
+    lf = open(logfile,'r')
+    line = lf.readline()
+    energies = []
+    while line:
+        if re_energies.match(line):
+            w = line.split()
+            n = np.where(np.array(w) == 'PotEng')[0][0]
+            line = lf.readline()
+            while line: 
+                try:
+                    w = line.split()
+                    energies.append([float(a) for a in line.split()][n])
+                except:
+                    break
+                line = lf.readline() 
+        line = lf.readline()
+    return energies
+                
 def main():
     atoms = read("./input.traj")
     n = len(atoms)
@@ -45,16 +68,7 @@ def main():
     traj = TrajectoryWriter("opt.traj", "a")
 
     file_name = glob.glob("log.lammps")[0]
-    f = open(file_name, 'r')
-    Lines = f.readlines()
-    patten = r"(\\d+\\s+\\-+\\d*\\.?\\d+)"
-    e_pot = []
-    for i, line in enumerate(Lines):
-        s = line.strip()
-        match = re.match(patten, s)
-        if match != None:
-            D = np.fromstring(s, sep=' ')
-            e_pot.append(D[1])
+    e_pot = lammps_energy(file_name)
 
     print(len(e_pot))
 
@@ -80,7 +94,9 @@ def main():
     f = atoms.get_forces()
     pos = atoms.get_positions()
     posz = pos[:, 2]
-    ndx = np.where(posz < 5.5)[0]
+    posz_mid = np.average(posz)
+    
+    ndx = np.where(posz < posz_mid)[0]
     c = FixAtoms(ndx)
     atoms.set_constraint(c)
     atoms.set_calculator(SPC(atoms, energy=e, forces=f))
@@ -119,44 +135,45 @@ timestep 0.0001
 region slab block EDGE EDGE EDGE EDGE 0 ZZ
 group fixed_slab region slab
 fix freeze fixed_slab setforce 0.0 0.0 0.0
-dump 1 all custom 1 md.lammpstrj id type x y z fx fy fz
+dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz
 thermo 1
-thermo_style custom step pe fmax
+thermo_style custom step fmax press cpu ke pe etotal temp
 
 #minimize
-min_modify norm max
-minimize 0.0 0.3 200 100000
+min_style cg
+minimize 1.0e-10 1.0e-12 200 1000000
 
 """)
 
 
-def run_ase(options): 
-    """
-    from ase import units
-    from ase.md.langevin import Langevin
-    from ase.io import read, write
-    import numpy as np
-    import time
-    from mace.calculators import MACECalculator
+# def run_ase(options): 
+#     """
+#     from ase import units
+#     from ase.md.langevin import Langevin
+#     from ase.io import read, write
+#     import numpy as np
+#     import time
+#     from mace.calculators import MACECalculator
 
-    calculator = MACECalculator(model_path='/content/checkpoints/MACE_model_run-123.model', device='cuda')
-    init_conf = read('BOTNet-datasets/dataset_3BPA/test_300K.xyz', '0')
-    init_conf.set_calculator(calculator)
+#     calculator = MACECalculator(model_path='/content/checkpoints/MACE_model_run-123.model', device='cuda')
+#     init_conf = read('BOTNet-datasets/dataset_3BPA/test_300K.xyz', '0')
+#     init_conf.set_calculator(calculator)
 
-    dyn = Langevin(init_conf, 0.5*units.fs, temperature_K=310, friction=5e-3)
-    def write_frame():
-            dyn.atoms.write('md_3bpa.xyz', append=True)
-    dyn.attach(write_frame, interval=50)
-    dyn.run(100)
-    """
+#     dyn = Langevin(init_conf, 0.5*units.fs, temperature_K=310, friction=5e-3)
+#     def write_frame():
+#             dyn.atoms.write('md_3bpa.xyz', append=True)
+#     dyn.attach(write_frame, interval=50)
+#     dyn.run(100)
+#     """
     
 
 def write_optimize_sh(model_path):
+    pwd = os.getcwd()
     with open("optimize.sh", "w") as f:
         f.write("pwd\n")
         # f.write("cp {} .\n".format(model_path))
-        f.write("cp ../../in.opt .\n")
-        f.write("cp ../../opt.py .\n")
+        f.write("cp {pwd}/in.opt .\n")
+        f.write("cp {pwd}/opt.py .\n")
         f.write("python opt.py\n")
 
 
