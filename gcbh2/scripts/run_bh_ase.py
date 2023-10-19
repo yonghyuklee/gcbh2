@@ -10,9 +10,8 @@ import itertools
 import numpy as np
 from ase.io import read
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, mirror_mutate, remove_H, add_H, rand_clustering
+from pygcga2 import randomize_all, remove_H, add_H#, rand_clustering, mirror_mutate
 
-# atom_elem_to_num = {"H": 1, "C": 6, "O": 8, "Al": 13, "Pt": 78}
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
 
 
@@ -39,9 +38,9 @@ def main():
     atoms_ = ase_adap.get_structure(atoms)
     ld = LammpsData.from_structure(atoms_, atom_style="atomic")
     ld.write_file("struc.data")
-
-    os.system("{} < in.opt")\n'.format(lammps_l
-
+""")
+        f.write('    os.system("{} < in.opt")\n'.format(lammps_loc))
+        f.write("""
     images = read("md.lammpstrj", ":")
     traj = TrajectoryWriter("opt.traj", "a")
 
@@ -117,9 +116,9 @@ pair_style        quip""")
         f.write("""
 timestep 0.0001
 
-# region slab block EDGE EDGE EDGE EDGE 0 5.5
-# group fixed_slab region slab
-# fix freeze fixed_slab setforce 0.0 0.0 0.0
+region slab block EDGE EDGE EDGE EDGE 0 ZZ
+group fixed_slab region slab
+fix freeze fixed_slab setforce 0.0 0.0 0.0
 dump 1 all custom 1 md.lammpstrj id type x y z fx fy fz
 thermo 1
 thermo_style custom step pe fmax
@@ -223,11 +222,23 @@ def main():
     with open(args.options) as f:
         options = json.load(f)
     model_file = options["model_file"]
+    model_label = options["model_label"]
     atom_order = options["atom_order"]
     lammps_loc = options["lammps_loc"]
 
+    name = glob.glob("input.traj")
+    slab_clean = read(name[0])
+    pos = slab_clean.get_positions()
+    posz = pos[:, 2] # gets z positions of atoms in surface
+    posz_mid = np.average(posz)
+
     write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
-    write_lammps_input_file(model_path=model_file, atom_order=atom_order)
+    write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
+    with open("in.opt", 'r') as f:
+        content = f.read()
+    new_content = content.replace('ZZ', "{}".format(posz_mid))
+    with open("in.opt", 'w') as f:
+        f.write(new_content)
     write_optimize_sh(model_path=model_file)
     run_bh(options)
 
