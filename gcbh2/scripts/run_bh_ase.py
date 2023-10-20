@@ -65,7 +65,7 @@ def main():
     ase_adap = AseAtomsAdaptor()
     atoms_ = ase_adap.get_structure(atoms)
     ld = LammpsData.from_structure(atoms_, atom_style="atomic")
-    ld.write_file("struc.data")
+    ld.write_file("slab.data")
 """)
         f.write('    os.system("{} < in.opt")\n'.format(lammps_loc))
         f.write("""
