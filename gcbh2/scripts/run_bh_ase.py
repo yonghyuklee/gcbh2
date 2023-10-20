@@ -247,9 +247,9 @@ def run_bh(options):
         [[-tol, -tol], [a + tol, -tol], [a + b + tol, c + tol], [b - tol, c + tol]]
     )
 
-    bond_range = {}
-    for v in itertools.product(["Zr", "O", "H"], repeat=2):
-        bond_range[frozenset(v)] = [1]
+    # bond_range = {}
+    # for v in itertools.product(["Zr", "O", "H"], repeat=2):
+    #     bond_range[frozenset(v)] = [1]
 
     bh_run.add_modifier(
         randomize_all,
