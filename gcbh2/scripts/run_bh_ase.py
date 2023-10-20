@@ -10,7 +10,7 @@ import itertools
 import numpy as np
 from ase.io import read, write
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, remove_H, add_H#, rand_clustering, mirror_mutate
+from pygcga2 import randomize_all, remove_H, add_multiple_H, add_H#, rand_clustering, mirror_mutate
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
 elements = {
@@ -67,7 +67,7 @@ def main():
     atoms = read("./input.traj")
     n = len(atoms)
     xyz2data(
-             structure,
+             atoms,
              vacuum_layer = 10,
              filename = 'slab.data',
              slab = True,
@@ -93,7 +93,7 @@ def main():
         file.writelines(lines)
     
 """)
-        f.write('    os.system("srun {} < in.opt")\n'.format(lammps_loc))
+        f.write('    os.system("srun {} < in.opt > out")\n'.format(lammps_loc))
         f.write("""
     images = read("md.lammpstrj", ":")
     traj = TrajectoryWriter("opt.traj", "a")
@@ -149,7 +149,7 @@ processors        * * *
 boundary          p p f
 
 #real data
-atom_style        atomic
+atom_style        charge
 read_data         slab.data
 
 #potential
@@ -261,7 +261,8 @@ def run_bh(options):
     )
     # bh_run.add_modifier(nve_n2p2, name="nve",bond_range=bond_range,  z_fix=6, N=100)
     # bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
-    bh_run.add_modifier(add_H, bond_range=bond_range, max_trial=50, weight=2)
+    # bh_run.add_modifier(add_H, bond_range=bond_range, max_trial=50, weight=2)
+    bh_run.add_modifier(add_multiple_H, bond_range=bond_range, max_trial=50, weight=2)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
 
     n_steps = 4000
