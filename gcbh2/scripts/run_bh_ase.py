@@ -254,7 +254,7 @@ def run_bh(options):
     bh_run.add_modifier(
         randomize_all,
         name="randomize",
-        dr=1,
+        dr=0.5,
         bond_range=bond_range,
         max_trial=50,
         weight=1,
