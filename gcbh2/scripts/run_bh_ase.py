@@ -255,8 +255,8 @@ def main():
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
         write("input.traj", slab_clean)
     for s in atom_order:
-        if any(atom.symbol != s for atom in slab_clean):
-            del atom_order[s]
+        if all(atom.symbol != s for atom in slab_clean):
+            atom_order.remove(s)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
     posz_mid = np.average(posz)
