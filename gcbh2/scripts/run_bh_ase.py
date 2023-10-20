@@ -8,7 +8,7 @@
 import glob, os, sys, json, argparse
 import itertools
 import numpy as np
-from ase.io import read
+from ase.io import read, write
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
 from pygcga2 import randomize_all, remove_H, add_H#, rand_clustering, mirror_mutate
 
@@ -253,6 +253,7 @@ def main():
     slab_clean = read(name[0])
     if any(atom.symbol == 'He' for atom in slab_clean):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
+        write("input.traj", slab_clean)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
     posz_mid = np.average(posz)
