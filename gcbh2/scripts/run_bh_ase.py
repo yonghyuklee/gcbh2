@@ -33,8 +33,9 @@ from ase.io.trajectory import TrajectoryWriter
 import numpy as np
 from ase.calculators.singlepoint import SinglePointCalculator as SPC
 from ase.constraints import FixAtoms
-from pymatgen.io.lammps.data import LammpsData
-from pymatgen.io.ase import AseAtomsAdaptor
+from xyz2data import *
+# from pymatgen.io.lammps.data import LammpsData
+# from pymatgen.io.ase import AseAtomsAdaptor
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
@@ -65,10 +66,13 @@ def lammps_energy(
 def main():
     atoms = read("./input.traj")
     n = len(atoms)
-    ase_adap = AseAtomsAdaptor()
-    atoms_ = ase_adap.get_structure(atoms)
-    ld = LammpsData.from_structure(atoms_, atom_style="atomic")
-    ld.write_file("slab.data")
+    xyz2data(
+             structure,
+             vacuum_layer = 10,
+             filename = 'slab.data',
+             slab = True,
+             qO = -0.82,
+             )
                 
     atom_order_str = []
     for s in atom_order:
