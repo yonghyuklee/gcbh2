@@ -439,7 +439,7 @@ class GrandCanonicalBasinHopping(Dynamics):
 
     def log_status(self):
         time_label = get_current_time()
-        natoms = self.atoms.get_number_of_atoms()
+        natoms = self.atoms.get_global_number_of_atoms()
         formula = self.atoms.get_chemical_formula()
         self.dumplog(
             "%20s%6s (natoms=%3d, %8s) Steps:%8d E=%15.8f F=%15.8f \n"
@@ -659,7 +659,7 @@ class GrandCanonicalBasinHopping(Dynamics):
         cell = optimized_atoms.get_cell()
         pbc = optimized_atoms.get_pbc()
         inatoms.set_constraint()
-        del inatoms[range(inatoms.get_number_of_atoms())]
+        del inatoms[range(inatoms.get_global_number_of_atoms())]
         inatoms.extend(optimized_atoms)
         inatoms.set_pbc(pbc)
         inatoms.set_cell(cell)
@@ -692,7 +692,7 @@ class GrandCanonicalBasinHopping(Dynamics):
         :return: None
         """
         self.atoms.set_constraint()
-        del self.atoms[range(self.atoms.get_number_of_atoms())]
+        del self.atoms[range(self.atoms.get_global_number_of_atoms())]
         cell = a.get_cell()
         pbc = a.get_pbc()
         self.atoms.extend(a.copy())
