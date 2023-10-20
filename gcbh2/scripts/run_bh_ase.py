@@ -13,6 +13,11 @@ from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
 from pygcga2 import randomize_all, remove_H, add_H#, rand_clustering, mirror_mutate
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
+elements = {
+            1 : 40,
+            2 : 8,
+            3 : 1,
+            }
 
 
 def write_opt_file(atom_order, lammps_loc):
@@ -246,6 +251,8 @@ def main():
 
     name = glob.glob("input.traj")
     slab_clean = read(name[0])
+    if any(atom.symbol == 'He' for atom in slab_clean):
+        slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
     posz_mid = np.average(posz)
