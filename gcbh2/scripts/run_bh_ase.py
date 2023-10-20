@@ -120,7 +120,6 @@ def write_lammps_input_file(model_path, model_label, atom_order):
 units             metal
 dimension         3
 processors        * * *
-box tilt          large
 boundary          p p f
 
 #real data
@@ -133,10 +132,11 @@ pair_style        quip
         atom_order_str = []
         name = glob.glob("input.traj")
         slab = read(name[0])
-        for s in atom_order:
+        atom_order_copy = atom_order.copy()
+        for s in atom_order_copy:
             if all(atom.symbol != s for atom in slab):
-                atom_order.remove(s)
-        for atom in atom_order:
+                atom_order_copy.remove(s)
+        for atom in atom_order_copy:
             atom_order_str.append(atom_elem_to_num[atom])
         atom_order_str = ' '.join(map(str, atom_order_str))
         f.write(f"pair_coeff * * {model_path} \"{model_label}\" {atom_order_str}")
