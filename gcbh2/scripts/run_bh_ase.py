@@ -67,7 +67,7 @@ def main():
     ld = LammpsData.from_structure(atoms_, atom_style="atomic")
     ld.write_file("slab.data")
 """)
-        f.write('    os.system("{} < in.opt")\n'.format(lammps_loc))
+        f.write('    os.system("srun {} < in.opt")\n'.format(lammps_loc))
         f.write("""
     images = read("md.lammpstrj", ":")
     traj = TrajectoryWriter("opt.traj", "a")
