@@ -131,6 +131,11 @@ read_data         slab.data
 pair_style        quip
 """)
         atom_order_str = []
+        name = glob.glob("input.traj")
+        slab = read(name[0])
+        for s in atom_order:
+            if all(atom.symbol != s for atom in slab):
+                atom_order.remove(s)
         for atom in atom_order:
             atom_order_str.append(atom_elem_to_num[atom])
         atom_order_str = ' '.join(map(str, atom_order_str))
@@ -254,9 +259,6 @@ def main():
     if any(atom.symbol == 'He' for atom in slab_clean):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
         write("input.traj", slab_clean)
-    for s in atom_order:
-        if all(atom.symbol != s for atom in slab_clean):
-            atom_order.remove(s)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
     posz_mid = np.average(posz)
