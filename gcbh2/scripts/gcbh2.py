@@ -17,7 +17,7 @@ import pickle as pckl
 from ase.db import connect
 from ase.neighborlist import NeighborList
 from ase.data import covalent_radii as covalent
-from ase.build import molecule
+# from ase.build import molecule
 from ase.io.trajectory import TrajectoryWriter
 
 import numpy as np
@@ -152,6 +152,8 @@ class GrandCanonicalBasinHopping(Dynamics):
             with open(chemical_potential, "r") as fp:
                 for i, istr in enumerate(fp):
                     if istr.strip() == "":
+                        continue
+                    if istr.startswith("#"):
                         continue
                     k, v = istr.split()
                     self.mu[k] = float(v)
