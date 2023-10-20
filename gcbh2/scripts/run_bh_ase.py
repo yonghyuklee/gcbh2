@@ -80,11 +80,11 @@ def main():
     with open("in.opt", 'r') as f:
         lines = f.readlines()
     for i, line in enumerate(lines):
-    if line.startswith('pair_coeff'):
-        parts = line.split()
-        kept_part = ' '.join(parts[:6])
-        new_line = f"{kept_part} {atom_order_str}\n"
-        lines[i] = new_line
+        if line.startswith('pair_coeff'):
+            parts = line.split()
+            kept_part = ' '.join(parts[:6])
+            new_line = f"{kept_part} {atom_order_str}\n"
+            lines[i] = new_line
     with open("in.opt", 'w') as file:
         file.writelines(lines)
     
