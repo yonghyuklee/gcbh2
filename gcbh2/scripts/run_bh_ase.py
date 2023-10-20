@@ -83,7 +83,7 @@ def main():
         if line.startswith('pair_coeff'):
             parts = line.split()
             kept_part = ' '.join(parts[:6])
-            new_line = f"{kept_part} {atom_order_str}\n"
+            new_line = f"{kept_part} {atom_order_str} \\n"
             lines[i] = new_line
     with open("in.opt", 'w') as file:
         file.writelines(lines)
