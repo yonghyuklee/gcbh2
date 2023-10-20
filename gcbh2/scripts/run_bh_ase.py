@@ -37,7 +37,10 @@ from pymatgen.io.lammps.data import LammpsData
 from pymatgen.io.ase import AseAtomsAdaptor
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
-                
+
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
+atom_order = ["Zr", "O", "H"]
+                 
 def lammps_energy(
                   logfile,
                   ):
@@ -58,7 +61,7 @@ def lammps_energy(
                 line = lf.readline() 
         line = lf.readline()
     return energies
-                
+                           
 def main():
     atoms = read("./input.traj")
     n = len(atoms)
@@ -66,6 +69,25 @@ def main():
     atoms_ = ase_adap.get_structure(atoms)
     ld = LammpsData.from_structure(atoms_, atom_style="atomic")
     ld.write_file("slab.data")
+                
+    atom_order_str = []
+    for s in atom_order:
+        if all(atom.symbol != s for atom in atoms):
+            atom_order.remove(s)
+    for atom in atom_order:
+        atom_order_str.append(atom_elem_to_num[atom])
+    atom_order_str = ' '.join(map(str, atom_order_str))
+    with open("in.opt", 'r') as f:
+        lines = f.readlines()
+    for i, line in enumerate(lines):
+    if line.startswith('pair_coeff'):
+        parts = line.split()
+        kept_part = ' '.join(parts[:6])
+        new_line = f"{kept_part} {atom_order_str}\n"
+        lines[i] = new_line
+    with open("in.opt", 'w') as file:
+        file.writelines(lines)
+    
 """)
         f.write('    os.system("srun {} < in.opt")\n'.format(lammps_loc))
         f.write("""
@@ -130,8 +152,8 @@ read_data         slab.data
 pair_style        quip
 """)
         atom_order_str = []
-        name = glob.glob("input.traj")
-        slab = read(name[0])
+        # name = glob.glob("input.traj")
+        slab = read("input.traj")
         atom_order_copy = atom_order.copy()
         for s in atom_order_copy:
             if all(atom.symbol != s for atom in slab):
