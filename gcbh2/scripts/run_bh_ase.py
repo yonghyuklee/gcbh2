@@ -93,7 +93,7 @@ def main():
         file.writelines(lines)
     
 """)
-        f.write('    os.system("srun {} < in.opt > out")\n'.format(lammps_loc))
+        f.write('    os.system("srun {} -in in.opt > out")\n'.format(lammps_loc))
         f.write("""
     images = read("md.lammpstrj", ":")
     traj = TrajectoryWriter("opt.traj", "a")
@@ -233,7 +233,7 @@ def run_bh(options):
         ("Zr", "Zr"): [1.0, 10],
         ("Zr", "O"): [1.0, 10],
         ("Zr", "H"): [1.0, 10],
-        ("O", "O"): [0.5, 10],
+        ("O", "O"): [0.8, 10],
         ("O", "H"): [0.8, 10],
         ("H", "H"): [0.5, 10],
     }
@@ -261,8 +261,8 @@ def run_bh(options):
     # )
     # bh_run.add_modifier(nve_n2p2, name="nve",bond_range=bond_range,  z_fix=6, N=100)
     # bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
-    bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=2.0)
-    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.0)
+    bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=1.5)
+    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=0.5)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
 
     n_steps = 4000
