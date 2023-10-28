@@ -285,6 +285,7 @@ def main():
     slab_clean = read(name[0])
     if any(atom.symbol == 'He' for atom in slab_clean):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
+        slab_clean.set_pbc((True,True,True))
         write("input.traj", slab_clean)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
