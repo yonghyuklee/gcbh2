@@ -80,7 +80,7 @@ class GrandCanonicalBasinHopping(Dynamics):
         t_nve=1500,
         maximum_temp=None,
         minimum_temp=None,
-        stop_steps=400,
+        stop_steps=50,
         logfile="grandcanonical.log",
         trajectory="grandcanonical.db",
         local_minima_trajectory="local_minima.traj",
