@@ -263,6 +263,7 @@ def run_bh(options):
     # bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
     # bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=1.5)
     bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
 
     n_steps = 4000
