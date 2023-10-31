@@ -178,7 +178,7 @@ thermo_style custom step fmax press cpu ke pe etotal temp
 
 #minimize
 min_style cg
-minimize 1.0e-10 1.0e-12 200 1000000
+minimize 0.0 1.0e-4 200 1000000
 
 """)
 
