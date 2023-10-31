@@ -10,7 +10,7 @@ import itertools
 import numpy as np
 from ase.io import read, write
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, remove_H, add_multiple_H, add_H#, rand_clustering, mirror_mutate
+from pygcga2 import randomize_all, remove_H, add_multiple_H, add_H, add_O#, rand_clustering, mirror_mutate
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
 elements = {
