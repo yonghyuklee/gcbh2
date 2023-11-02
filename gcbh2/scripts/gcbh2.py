@@ -466,9 +466,10 @@ class GrandCanonicalBasinHopping(Dynamics):
             if self.no_improvement_step >= self.stop_steps:
                 self.dumplog(
                     "The best solution has not "
-                    "improved after {} steps\n".format(self.no_improvement_step),
+                    "improved for {} steps\n".format(self.no_improvement_step),
                     highlight="#",
                 )
+                raise RuntimeError("The best solution is not improved for {} steps".format(self.no_improvement_step))
             self.dumplog("-------------------------------------------------------")
             time_label = get_current_time()
             self.dumplog(
