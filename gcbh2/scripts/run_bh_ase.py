@@ -146,7 +146,7 @@ def write_lammps_input_file(model_path, model_label, atom_order):
 units             metal
 dimension         3
 processors        * * *
-boundary          p p f
+boundary          p p p
 
 #real data
 atom_style        charge
