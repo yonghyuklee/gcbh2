@@ -15,12 +15,13 @@ import shutil
 from distutils.version import LooseVersion
 import pickle as pckl
 from ase.db import connect
-from ase.neighborlist import NeighborList
+from ase.neighborlist import NeighborList, natural_cutoffs, get_connectivity_matrix
 from ase.data import covalent_radii as covalent
 # from ase.build import molecule
 from ase.io.trajectory import TrajectoryWriter
 
 import numpy as np
+from scipy import sparse
 
 # print(np.version.version)
 # assert LooseVersion(np.version.version) > LooseVersion("1.7.0")
@@ -515,9 +516,21 @@ class GrandCanonicalBasinHopping(Dynamics):
                     )
                 )
 
-    def natural_cutoffs(self, atoms, multiplier=1.1):
-        """Generate a neighbor list cutoff for every atom"""
-        return [covalent[atom.number] * multiplier for atom in atoms]
+    # def natural_cutoffs(self, atoms, multiplier=1.1):
+    #     """Generate a neighbor list cutoff for every atom"""
+    #     return [covalent[atom.number] * multiplier for atom in atoms]
+
+    def examine_unconnected_components(self, newatoms):
+        nat_cut = natural_cutoffs(newatoms, mult=1.0)
+        nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
+        nl.update(newatoms)
+        matrix = nl.get_connectivity_matrix()
+        n_components, component_list = sparse.csgraph.connected_components(matrix)
+        print("There are {} components in the system".format(n_components))
+        if n_components == 1:
+            return True
+        elif n_components > 1:
+            return False
 
     def accepting_new_structures(self, newatoms=None, move_action=None):
         """This function takes care of all the accepting algorithm. I.E metropolis algorithms
@@ -535,10 +548,10 @@ class GrandCanonicalBasinHopping(Dynamics):
 
         accept = False
         modifier_weight_action = "decrease"
-        if Fn < self.free_energy:
+        if Fn < self.free_energy and self.examine_unconnected_components(newatoms):
             accept = True
             modifier_weight_action = "increase"
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB):
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and self.examine_unconnected_components(newatoms):
             accept = True
 
         if move_action is not None:
@@ -552,17 +565,13 @@ class GrandCanonicalBasinHopping(Dynamics):
             self.update_self_atoms(newatoms)
             self.energy = En
             self.free_energy = Fn
-            # if move_action is not None:
-            #     self.update_modifier_weights(name=move_action, action='increase')
         else:
             _int_accept = 0
             self.dumplog("Rejected, F(old)=%.3f F(new)=%.3f\n" % (self.free_energy, Fn))
+            if not self.examine_unconnected_components(newatoms):
+                print("Some atoms have migrated out of the surface.")
             self.rejected_steps += 1
-            # if move_action is not None:
-            #     self.update_modifier_weights(name=move_action, action='decrease')
 
-        # if accept and self.lm_trajectory is not None:
-        #     self.lm_trajectory.write(self.atoms)
         if accept:
             self.lm_trajectory.write(self.atoms, accept=1)
         else:
