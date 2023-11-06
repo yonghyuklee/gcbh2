@@ -526,7 +526,7 @@ class GrandCanonicalBasinHopping(Dynamics):
         nl.update(newatoms)
         matrix = nl.get_connectivity_matrix()
         n_components, component_list = sparse.csgraph.connected_components(matrix)
-        print("There are {} components in the system".format(n_components))
+        self.dumplog("There are {} components in the system".format(n_components))
         if n_components == 1:
             return True
         elif n_components > 1:
@@ -569,7 +569,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             _int_accept = 0
             self.dumplog("Rejected, F(old)=%.3f F(new)=%.3f\n" % (self.free_energy, Fn))
             if not self.examine_unconnected_components(newatoms):
-                print("Some atoms have migrated out of the surface.")
+                self.dumplog("Some atoms have migrated out of the surface.")
             self.rejected_steps += 1
 
         if accept:
