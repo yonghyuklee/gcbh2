@@ -12,13 +12,13 @@ import subprocess
 import os
 import sys
 import shutil
-from distutils.version import LooseVersion
+# from distutils.version import LooseVersion
 import pickle as pckl
 from ase.db import connect
-from ase.neighborlist import NeighborList, natural_cutoffs, get_connectivity_matrix
+from ase.neighborlist import NeighborList, natural_cutoffs #, get_connectivity_matrix
 from ase.data import covalent_radii as covalent
 # from ase.build import molecule
-from ase.io.trajectory import TrajectoryWriter
+# from ase.io.trajectory import TrajectoryWriter
 
 import numpy as np
 from scipy import sparse
