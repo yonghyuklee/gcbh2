@@ -302,19 +302,19 @@ def main():
     if any(atom.symbol == 'He' for atom in slab_clean):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
         slab_clean.set_pbc((True,True,True))
-        if not examine_unconnected_components(slab_clean):
-            nat_cut = natural_cutoffs(slab_clean, mult=1.0)
-            nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
-            nl.update(slab_clean)
-            matrix = nl.get_connectivity_matrix()
-            n_components, component_list = sparse.csgraph.connected_components(matrix)
-            unique, counts = np.unique(component_list, return_counts=True)
-            disconnected_atom = []
-            for n, c in enumerate(component_list):
-                if c != unique[np.argmax(counts)]:
-                    disconnected_atom.append(n)
-            del slab_clean[disconnected_atom]
-        write("input.traj", slab_clean)
+    if not examine_unconnected_components(slab_clean):
+        nat_cut = natural_cutoffs(slab_clean, mult=1.0)
+        nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
+        nl.update(slab_clean)
+        matrix = nl.get_connectivity_matrix()
+        n_components, component_list = sparse.csgraph.connected_components(matrix)
+        unique, counts = np.unique(component_list, return_counts=True)
+        disconnected_atom = []
+        for n, c in enumerate(component_list):
+            if c != unique[np.argmax(counts)]:
+                disconnected_atom.append(n)
+        del slab_clean[disconnected_atom]
+    write("input.traj", slab_clean)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
     posz_mid = np.average(posz)
