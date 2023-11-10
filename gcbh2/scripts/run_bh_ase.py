@@ -8,7 +8,9 @@
 import glob, os, sys, json, argparse
 import itertools
 import numpy as np
+from scipy import sparse
 from ase.io import read, write
+from ase.neighborlist import NeighborList, natural_cutoffs
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
 from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O#, rand_clustering, mirror_mutate
 
@@ -202,6 +204,18 @@ minimize 0.0 1.0e-4 200 1000000
 #     dyn.attach(write_frame, interval=50)
 #     dyn.run(100)
 #     """
+
+
+def examine_unconnected_components(atoms):
+    nat_cut = natural_cutoffs(atoms, mult=1.0)
+    nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
+    nl.update(atoms)
+    matrix = nl.get_connectivity_matrix()
+    n_components, component_list = sparse.csgraph.connected_components(matrix)
+    if n_components == 1:
+        return True
+    elif n_components > 1:
+        return False
     
 
 def write_optimize_sh(model_path):
@@ -288,6 +302,18 @@ def main():
     if any(atom.symbol == 'He' for atom in slab_clean):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
         slab_clean.set_pbc((True,True,True))
+        if not examine_unconnected_components(slab_clean):
+            nat_cut = natural_cutoffs(slab_clean, mult=1.0)
+            nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
+            nl.update(slab_clean)
+            matrix = nl.get_connectivity_matrix()
+            n_components, component_list = sparse.csgraph.connected_components(matrix)
+            unique, counts = np.unique(component_list, return_counts=True)
+            disconnected_atom = []
+            for n, c in enumerate(component_list):
+                if c != unique[np.argmax(counts)]:
+                    disconnected_atom.append(n)
+            del slab_clean[disconnected_atom]
         write("input.traj", slab_clean)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
