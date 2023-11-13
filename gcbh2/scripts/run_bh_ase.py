@@ -127,7 +127,8 @@ def main():
     f = atoms.get_forces()
     pos = atoms.get_positions()
     posz = pos[:, 2]
-    posz_mid = np.average(posz)
+    pos_min = np.min(posz)
+    posz_mid = np.min(posz) + 5
     
     ndx = np.where(posz < posz_mid)[0]
     c = FixAtoms(ndx)
@@ -317,7 +318,7 @@ def main():
     write("input.traj", slab_clean)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
-    posz_mid = np.average(posz)
+    posz_mid = np.min(posz) + 5 # np.average(posz)
 
     write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
     write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
