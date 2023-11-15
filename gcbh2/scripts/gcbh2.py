@@ -19,6 +19,8 @@ from ase.db import connect
 from ase.neighborlist import NeighborList, natural_cutoffs #, get_connectivity_matrix
 from ase.data import covalent_radii as covalent
 from quippy.potential import Potential
+from mpi4py import MPI
+from ase.calculators.lammpslib import LAMMPSlib
 # from ase.build import molecule
 # from ase.io.trajectory import TrajectoryWriter
 
@@ -126,8 +128,6 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.copied_files = files_to_copied
 
         if model_label and model_file:
-            from mpi4py import MPI
-            from ase.calculators.lammpslib import LAMMPSlib
             self.model_file = model_file
             self.model_label = model_label
             self.elements = elements
