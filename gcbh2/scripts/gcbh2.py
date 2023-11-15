@@ -131,6 +131,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             self.model_file = model_file
             self.model_label = model_label
             self.elements = elements
+            self.cmds = None
 
         # some file names and folders are hardcoded
         self.fn_current_atoms = "Current_atoms.traj"
