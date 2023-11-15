@@ -8,6 +8,7 @@ from time import strftime, localtime
 from ase.calculators.singlepoint import SinglePointCalculator
 from ase.calculators.calculator import PropertyNotImplementedError
 from ase.io.trajectory import Trajectory
+from ase.constraints import FixAtoms
 import subprocess
 import os
 import sys
@@ -17,6 +18,7 @@ import pickle as pckl
 from ase.db import connect
 from ase.neighborlist import NeighborList, natural_cutoffs #, get_connectivity_matrix
 from ase.data import covalent_radii as covalent
+from quippy.potential import Potential
 # from ase.build import molecule
 # from ase.io.trajectory import TrajectoryWriter
 
@@ -90,7 +92,10 @@ class GrandCanonicalBasinHopping(Dynamics):
         restart=False,
         chemical_potential=None,
         bash_script="optimize.sh",
+        model_file=None,
+        model_label=None,
         files_to_copied=None,
+        elements=None,
     ):
         """Parameters:
 
@@ -119,6 +124,13 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.restart = restart
         self.bash_script = bash_script
         self.copied_files = files_to_copied
+
+        if model_label and model_file:
+            from mpi4py import MPI
+            from ase.calculators.lammpslib import LAMMPSlib
+            self.model_file = model_file
+            self.model_label = model_label
+            self.elements = elements
 
         # some file names and folders are hardcoded
         self.fn_current_atoms = "Current_atoms.traj"
@@ -608,6 +620,52 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.save_current_status()
         self.log_status()
         self.dumplog("-------------------------------------------------------")
+    
+    def optimize_script(self, inatoms=None):
+        from ase.optimize import BFGS
+        atoms = inatoms.copy()
+        atoms.pbc = True
+        if not self.cmds:
+            el = []
+            uniq_elements = np.unique(atoms.get_chemical_symbols())
+            for e in uniq_elements:
+                el.append(self.elements[e])
+            self.el = ' '.join(map(str, np.sort(el)[::-1]))
+            self.cmds = ["pair_style quip",
+                         "pair_coeff * * {} 'Potential xml_label={}' {}".format(self.model_file, self.model_label, self.el)]
+            self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
+        else:
+            el = []
+            uniq_elements = np.unique(atoms.get_chemical_symbols())
+            for e in uniq_elements:
+                el.append(self.elements[e])
+            if self.el != el:
+                self.el = el
+                self.cmds = ["pair_style quip",
+                         "pair_coeff * * {} 'Potential xml_label={}' {}".format(self.model_file, self.model_label, self.el)]
+                self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
+            else:
+                pass
+
+        pos = atoms.get_positions()
+        posz = pos[:, 2]
+        posz_mid = np.average(posz)
+        ndx = np.where(posz < posz_mid)[0]
+        c = FixAtoms(ndx)
+        atoms.set_constraint(c)
+
+        atoms.calc = self.lammps
+        bfgs = BFGS(atoms, logfile='stdout')
+        traj = Trajectory('opt.traj', 'w', atoms)
+        bfgs.attach(traj)
+        bfgs.run(fmax=0.01)
+
+        atoms = read("opt.traj@-1")
+        e = atoms.get_potential_energy()
+        f = atoms.get_forces()
+        atoms.set_calculator(SinglePointCalculator(atoms, energy=e, forces=f))
+        atoms.write("optimized.traj")
+        # return atoms
 
     def optimize(self, inatoms=None, restart=False):
         self.dumplog(
@@ -628,7 +686,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             if not os.path.isdir(subdir):
                 os.makedirs(subdir)
             # prepare all the files in the subfolders
-            if script not in copied_files:
+            if script not in copied_files and not self.model_file:
                 copied_files.append(script)
             for fn in copied_files:
                 assert os.path.isfile(fn)
@@ -636,13 +694,16 @@ class GrandCanonicalBasinHopping(Dynamics):
             write(os.path.join(subdir, "input.traj"), atoms)
         try:
             os.chdir(subdir)
-            opt_job = subprocess.Popen(["bash", script], cwd=subdir)
-            opt_job.wait()
-            if opt_job.returncode < 0:
-                sys.stderr.write(
-                    "optimization does not terminate properly at {}".format(subdir)
-                )
-                sys.exit(1)
+            if not self.model_file:
+                opt_job = subprocess.Popen(["bash", script], cwd=subdir)
+                opt_job.wait()
+                if opt_job.returncode < 0:
+                    sys.stderr.write(
+                        "optimization does not terminate properly at {}".format(subdir)
+                    )
+                    sys.exit(1)
+            else:
+                self.optimize_script(atoms)
         except:
             raise RuntimeError(
                 "some error encountered at folder {} during optimizations".format(
