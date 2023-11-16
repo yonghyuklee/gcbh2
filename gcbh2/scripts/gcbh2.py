@@ -127,11 +127,10 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.bash_script = bash_script
         self.copied_files = files_to_copied
 
-        if model_label and model_file:
-            self.model_file = model_file
-            self.model_label = model_label
-            self.elements = elements
-            self.cmds = None
+        self.model_file = model_file
+        self.model_label = model_label
+        self.elements = elements
+        self.cmds = None
 
         # some file names and folders are hardcoded
         self.fn_current_atoms = "Current_atoms.traj"
