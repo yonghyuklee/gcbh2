@@ -242,9 +242,9 @@ def run_bh(options):
         files_to_copied=filescopied,
         restart=True,
         chemical_potential="chemical_potentials.dat",
-        model_file=options["model_file"],
-        model_label=options["model_label"],
-        elements=atom_elem_to_num,
+        # model_file=options["model_file"],
+        # model_label=options["model_label"],
+        # elements=atom_elem_to_num,
     )
 
     bond_range = {

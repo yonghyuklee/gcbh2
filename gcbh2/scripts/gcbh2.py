@@ -18,7 +18,7 @@ import pickle as pckl
 from ase.db import connect
 from ase.neighborlist import NeighborList, natural_cutoffs #, get_connectivity_matrix
 from ase.data import covalent_radii as covalent
-from quippy.potential import Potential
+# from quippy.potential import Potential
 from mpi4py import MPI
 from ase.calculators.lammpslib import LAMMPSlib
 # from ase.build import molecule
@@ -640,6 +640,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             uniq_elements = np.unique(atoms.get_chemical_symbols())
             for e in uniq_elements:
                 el.append(self.elements[e])
+            el = ' '.join(map(str, np.sort(el)[::-1]))
             if self.el != el:
                 self.el = el
                 self.cmds = ["pair_style quip",
