@@ -21,7 +21,7 @@ from ase.data import covalent_radii as covalent
 from ase.data import atomic_numbers, atomic_masses
 # from quippy.potential import Potential
 from mpi4py import MPI
-from lammps import Pylammps
+from lammps import PyLammps
 # from ase.calculators.lammpslib import LAMMPSlib
 # from ase.build import molecule
 # from ase.io.trajectory import TrajectoryWriter
