@@ -98,8 +98,9 @@ def main():
         if n == 0:
             print('yes')
             L.command("read_data slab.data")
-            L.command("pair_style quip")""")
-            f.write(f"L.command(\"pair_coeff * * {model_path} \"{model_label}\" {{}}\".format(atom_order_str))")
+            L.command("pair_style quip")
+            """)
+            f.write(f"L.command(\"pair_coeff * * {model_path} '{model_label}' {{}}\".format(atom_order_str))")
             f.write("""
         else:
             L.command("reset_timestep 0")
@@ -131,7 +132,7 @@ def main():
     
             for ind, atom in enumerate(atom_order):
                 f.write(
-                    f"        an = [{atom_elem_to_num[atom]} if x == {ind+1} else x for x in an]\n"
+                    f"            an = [{atom_elem_to_num[atom]} if x == {ind+1} else x for x in an]\n"
                 )
             f.write("""
             a.set_atomic_numbers(an)
@@ -149,11 +150,12 @@ def main():
         a.set_constraint(c)
         a.set_calculator(SPC(a, energy=e, forces=f))
                     
-        final_atoms += a
+        final_atoms.append(a)
         # a.write("optimized.traj")
 
         os.chdir("..")
 
+    final_atom = None
     for a in final_atoms:
         if not final_atom:
             final_atom = a
@@ -471,6 +473,8 @@ def main(multiple=False):
 
     if multiple:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
+        write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
+        write_optimize_sh(model_path=model_file, multiple=multiple)
     else:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
         write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
@@ -479,8 +483,8 @@ def main(multiple=False):
         new_content = content.replace('ZZ', "{}".format(posz_mid))
         with open("in.opt", 'w') as f:
             f.write(new_content)
-        write_optimize_sh(model_path=model_file)
+        write_optimize_sh(model_path=model_file, multiple=multiple)
     run_bh(options)
 
 
-main()
+main(multiple=True)
