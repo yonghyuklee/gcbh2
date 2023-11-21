@@ -772,9 +772,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                 for fn in copied_files:
                     assert os.path.isfile(fn)
                     shutil.copy(os.path.join(topdir, fn), os.path.join(subdir, fn))
-                for n, atom in enumerate(atoms):
-                    os.makedirs("%02d" % n)
-                    write(os.path.join(subdir, "%02d" % n, "input.traj"), atom)
+                write(os.path.join(subdir, "input.traj"), atoms)
             try:
                 os.chdir(subdir)
                 if not self.model_file:
