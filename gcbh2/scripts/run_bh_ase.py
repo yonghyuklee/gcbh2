@@ -73,6 +73,7 @@ def main():
     L.command("atom_style charge")
 
     atoms = read("./input.traj", ":")
+    final_atoms = []
     #n = len(atoms, ":")
     for n, atom in enumerate(atoms):
         os.makedirs("%02d" % n, exist_ok=True)
@@ -147,10 +148,22 @@ def main():
         c = FixAtoms(ndx)
         a.set_constraint(c)
         a.set_calculator(SPC(a, energy=e, forces=f))
-        a.write("optimized.traj")
+                    
+        final_atoms += a
+        # a.write("optimized.traj")
 
         os.chdir("..")
 
+    for a in final_atoms:
+        if not final_atom:
+            final_atom = a
+        elif a.get_potential_energy() < final_atom.get_potential_energy():
+            final_atom = a
+        else:
+            pass
+
+    final_atom.write("optimized.traj")
+                    
 main()""")
 
     else:
@@ -348,14 +361,17 @@ def examine_unconnected_components(atoms):
         return False
     
 
-def write_optimize_sh(model_path):
+def write_optimize_sh(model_path, multiple=False):
     pwd = os.getcwd()
     with open("optimize.sh", "w") as f:
         f.write("pwd\n")
         # f.write("cp {} .\n".format(model_path))
-        f.write(f"cp {pwd}/in.opt .\n")
         f.write(f"cp {pwd}/opt.py .\n")
-        f.write("python opt.py\n")
+        if multiple:
+            f.write("srun python opt.py\n")
+        else:
+            f.write(f"cp {pwd}/in.opt .\n")
+            f.write("python opt.py\n")
 
 
 def run_bh(options, multiple=False):

@@ -475,7 +475,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             )
         self.dumplog("Current Temperature is %.2f" % self.T)
 
-    def run(self, maximum_steps=4000, maximum_trial=50, multiple=False):
+    def run(self, maximum_steps=4000, maximum_trial=50, multiple=False, n_multiple=10):
         """Hop the basins for defined number of steps."""
         if multiple:
             while self.nsteps < maximum_steps:
@@ -497,7 +497,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                     self.modifier_name = modifier_name
                     try:
                         new_atoms = []
-                        for _ in range(10):
+                        for _ in range(n_multiple):
                             new_atoms += self.move(modifier_name=modifier_name)
                     except (
                         NoReasonableStructureFound
@@ -516,7 +516,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                         # self.log_status()
                         self.save_current_status()  # before optimization switch on the self.on_optimization flag
                         # self.dumplog("{}: begin structure optimization subroutine".format(get_current_time()))
-                        self.optimize(inatoms=new_atoms, multiple=True)
+                        self.optimize(inatoms=new_atoms, multiple=multiple)
                         # self.dumplog("{}: Optimization Done\n".format(get_current_time()))
                         self.accepting_new_structures(
                             newatoms=new_atoms, move_action=modifier_name
@@ -679,81 +679,73 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.log_status()
         self.dumplog("-------------------------------------------------------")
     
-    def optimize_script(self, inatoms=None):
-        atoms = inatoms.copy()
-        atoms.pbc = True
-        pos = atoms.get_positions()
-        posz = pos[:, 2]
-        posz_min = np.min(posz)
-        posz_mid = posz_min + 5
-        if not self.cmds:
-            el = []
-            uniq_elements = np.unique(atoms.get_chemical_symbols())
-            for e in uniq_elements:
-                el.append(self.elements[e])
-            self.el = ' '.join(map(str, np.sort(el)[::-1]))
-            mass = []
-            for e in np.sort(el)[::-1]:
-                mass.append(atomic_masses[e])
-            self.mass = ' '.join(map(str, mass))
-            self.cmds = ['pair_style quip',
-                         'pair_coeff * * {} "Potential xml_label={}" {}'.format(self.model_file, self.model_label, self.el),
-                         'region slab block EDGE EDGE EDGE EDGE 0 {}'.format(posz_mid),
-                         'group fixed_slab region slab', 
-                         'fix freeze fixed_slab setforce 0.0 0.0 0.0',
-                         'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
-                         'thermo 1',
-                         'thermo_style custom step fmax press cpu ke pe etotal temp',
-                         'min_style cg',
-                         'minimize 0.0 1.0e-4 200 1000000',]
-            cmds = ['mass 1 91.224', 'mass 2 15.999',
-        'pair_style quip',
-        'pair_coeff * * /pscratch/sd/y/yhlee/CuPd/gap/GAP_V4/md/../gap.xml "Potential xml_label=GAP_2023_11_19_-480_16_37_9_826" 40 8',
-        'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
-        'thermo 1',
-        'thermo_style custom step fmax press cpu ke pe etotal temp',
-        'min_style cg',
-        'minimize 0.0 1.0e-4 200 1000000']
-            self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
-        else:
-            el = []
-            uniq_elements = np.unique(atoms.get_chemical_symbols())
-            for e in uniq_elements:
-                el.append(self.elements[e])
-            el = ' '.join(map(str, np.sort(el)[::-1]))
-            if self.el != el:
-                self.el = el
-                self.cmds = ['pair_style quip',
-                         'pair_coeff * * {} "Potential xml_label={}" {}'.format(self.model_file, self.model_label, self.el),
-                         'region slab block EDGE EDGE EDGE EDGE 0 {}'.format(posz_mid),
-                         'group fixed_slab region slab', 
-                         'fix freeze fixed_slab setforce 0.0 0.0 0.0',
-                         'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
-                         'thermo 1',
-                         'thermo_style custom step fmax press cpu ke pe etotal temp',
-                         'min_style cg',
-                         'minimize 0.0 1.0e-4 200 1000000',]
-                self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
-            else:
-                pass
+    # def optimize_script(self, inatoms=None):
+    #     atoms = inatoms.copy()
+    #     atoms.pbc = True
+    #     pos = atoms.get_positions()
+    #     posz = pos[:, 2]
+    #     posz_min = np.min(posz)
+    #     posz_mid = posz_min + 5
+    #     if not self.cmds:
+    #         el = []
+    #         uniq_elements = np.unique(atoms.get_chemical_symbols())
+    #         for e in uniq_elements:
+    #             el.append(self.elements[e])
+    #         self.el = ' '.join(map(str, np.sort(el)[::-1]))
+    #         mass = []
+    #         for e in np.sort(el)[::-1]:
+    #             mass.append(atomic_masses[e])
+    #         self.mass = ' '.join(map(str, mass))
+    #         self.cmds = ['pair_style quip',
+    #                      'pair_coeff * * {} "Potential xml_label={}" {}'.format(self.model_file, self.model_label, self.el),
+    #                      'region slab block EDGE EDGE EDGE EDGE 0 {}'.format(posz_mid),
+    #                      'group fixed_slab region slab', 
+    #                      'fix freeze fixed_slab setforce 0.0 0.0 0.0',
+    #                      'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
+    #                      'thermo 1',
+    #                      'thermo_style custom step fmax press cpu ke pe etotal temp',
+    #                      'min_style cg',
+    #                      'minimize 0.0 1.0e-4 200 1000000',]
+    #         self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
+    #     else:
+    #         el = []
+    #         uniq_elements = np.unique(atoms.get_chemical_symbols())
+    #         for e in uniq_elements:
+    #             el.append(self.elements[e])
+    #         el = ' '.join(map(str, np.sort(el)[::-1]))
+    #         if self.el != el:
+    #             self.el = el
+    #             self.cmds = ['pair_style quip',
+    #                      'pair_coeff * * {} "Potential xml_label={}" {}'.format(self.model_file, self.model_label, self.el),
+    #                      'region slab block EDGE EDGE EDGE EDGE 0 {}'.format(posz_mid),
+    #                      'group fixed_slab region slab', 
+    #                      'fix freeze fixed_slab setforce 0.0 0.0 0.0',
+    #                      'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
+    #                      'thermo 1',
+    #                      'thermo_style custom step fmax press cpu ke pe etotal temp',
+    #                      'min_style cg',
+    #                      'minimize 0.0 1.0e-4 200 1000000',]
+    #             self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
+    #         else:
+    #             pass
 
         
-        ndx = np.where(posz < posz_mid)[0]
-        c = FixAtoms(ndx)
-        atoms.set_constraint(c)
+    #     ndx = np.where(posz < posz_mid)[0]
+    #     c = FixAtoms(ndx)
+    #     atoms.set_constraint(c)
 
-        atoms.calc = self.lammps
-        bfgs = BFGS(atoms, logfile='stdout')
-        traj = Trajectory('opt.traj', 'w', atoms)
-        bfgs.attach(traj)
-        bfgs.run(fmax=0.01)
+    #     atoms.calc = self.lammps
+    #     bfgs = BFGS(atoms, logfile='stdout')
+    #     traj = Trajectory('opt.traj', 'w', atoms)
+    #     bfgs.attach(traj)
+    #     bfgs.run(fmax=0.01)
 
-        atoms = read("opt.traj@-1")
-        e = atoms.get_potential_energy()
-        f = atoms.get_forces()
-        atoms.set_calculator(SinglePointCalculator(atoms, energy=e, forces=f))
-        atoms.write("optimized.traj")
-        # return atoms
+    #     atoms = read("opt.traj@-1")
+    #     e = atoms.get_potential_energy()
+    #     f = atoms.get_forces()
+    #     atoms.set_calculator(SinglePointCalculator(atoms, energy=e, forces=f))
+    #     atoms.write("optimized.traj")
+    #     # return atoms
 
     def optimize(self, inatoms=None, restart=False, multiple=False):
         self.dumplog(
