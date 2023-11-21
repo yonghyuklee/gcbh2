@@ -12,7 +12,7 @@ from scipy import sparse
 from ase.io import read, write
 from ase.neighborlist import NeighborList, natural_cutoffs
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O#, rand_clustering, mirror_mutate
+from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O, add_OH#, rand_clustering, mirror_mutate
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
 elements = {
@@ -282,6 +282,7 @@ def run_bh(options):
     # bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=1.5)
     bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
     bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 

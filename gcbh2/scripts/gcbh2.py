@@ -18,6 +18,7 @@ import pickle as pckl
 from ase.db import connect
 from ase.neighborlist import NeighborList, natural_cutoffs #, get_connectivity_matrix
 from ase.data import covalent_radii as covalent
+from ase.data import atomic_numbers, atomic_masses
 # from quippy.potential import Potential
 from mpi4py import MPI
 from ase.calculators.lammpslib import LAMMPSlib
@@ -625,14 +626,26 @@ class GrandCanonicalBasinHopping(Dynamics):
         from ase.optimize import BFGS
         atoms = inatoms.copy()
         atoms.pbc = True
+        pos = atoms.get_positions()
+        posz = pos[:, 2]
+        posz_min = np.min(posz)
+        posz_mid = posz_min + 5
         if not self.cmds:
             el = []
             uniq_elements = np.unique(atoms.get_chemical_symbols())
             for e in uniq_elements:
                 el.append(self.elements[e])
             self.el = ' '.join(map(str, np.sort(el)[::-1]))
-            self.cmds = ["pair_style quip",
-                         "pair_coeff * * {} 'Potential xml_label={}' {}".format(self.model_file, self.model_label, self.el)]
+            self.cmds = ['pair_style quip',
+                         'pair_coeff * * {} "Potential xml_label={}" {}'.format(self.model_file, self.model_label, self.el),
+                         'region slab block EDGE EDGE EDGE EDGE 0 {}'.format(posz_mid),
+                         'group fixed_slab region slab', 
+                         'fix freeze fixed_slab setforce 0.0 0.0 0.0',
+                         'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
+                         'thermo 1',
+                         'thermo_style custom step fmax press cpu ke pe etotal temp',
+                         'min_style cg',
+                         'minimize 0.0 1.0e-4 200 1000000',]
             self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
         else:
             el = []
@@ -642,15 +655,21 @@ class GrandCanonicalBasinHopping(Dynamics):
             el = ' '.join(map(str, np.sort(el)[::-1]))
             if self.el != el:
                 self.el = el
-                self.cmds = ["pair_style quip",
-                         "pair_coeff * * {} 'Potential xml_label={}' {}".format(self.model_file, self.model_label, self.el)]
+                self.cmds = ['pair_style quip',
+                         'pair_coeff * * {} "Potential xml_label={}" {}'.format(self.model_file, self.model_label, self.el),
+                         'region slab block EDGE EDGE EDGE EDGE 0 {}'.format(posz_mid),
+                         'group fixed_slab region slab', 
+                         'fix freeze fixed_slab setforce 0.0 0.0 0.0',
+                         'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
+                         'thermo 1',
+                         'thermo_style custom step fmax press cpu ke pe etotal temp',
+                         'min_style cg',
+                         'minimize 0.0 1.0e-4 200 1000000',]
                 self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
             else:
                 pass
 
-        pos = atoms.get_positions()
-        posz = pos[:, 2]
-        posz_mid = np.average(posz)
+        
         ndx = np.where(posz < posz_mid)[0]
         c = FixAtoms(ndx)
         atoms.set_constraint(c)
