@@ -22,11 +22,140 @@ elements = {
             }
 
 
-def write_opt_file(atom_order, lammps_loc):
+def write_opt_file(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False):
     # opt.py file
+    if multiple:
+        with open("opt.py", "w") as f:
+            f.write("""import re
+import os
+import glob
 
-    with open("opt.py", "w") as f:
-        f.write("""import re
+from ase.io import *
+from ase.io.trajectory import TrajectoryWriter
+import numpy as np
+from ase.calculators.singlepoint import SinglePointCalculator as SPC
+from ase.constraints import FixAtoms
+from xyz2data import *
+from mpi4py import MPI
+from lammps import PyLammps
+# from pymatgen.io.lammps.data import LammpsData
+# from pymatgen.io.ase import AseAtomsAdaptor
+
+re_energies = re.compile(\"\"\"^\s*Step \"\"\")
+
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
+atom_order = ["Zr", "O", "H"]
+
+def lammps_energy(
+                  logfile,
+                  ):
+    lf = open(logfile,'r')
+    line = lf.readline()
+    while line:
+        if re_energies.match(line):
+            energies = []
+            w = line.split()
+            n = np.where(np.array(w) == 'PotEng')[0][0]
+            line = lf.readline()
+            while line: 
+                try:
+                    w = line.split()
+                    energies.append([float(a) for a in line.split()][n])
+                except:
+                    break
+                line = lf.readline() 
+        line = lf.readline()
+    return energies
+                           
+def main():
+    L = PyLammps()
+    L.command("units metal")
+    L.command("atom_style charge")
+
+    atoms = read("./input.traj", ":")
+    #n = len(atoms, ":")
+    for n, atom in enumerate(atoms):
+        os.makedirs("%02d" % n, exist_ok=True)
+        os.chdir("%02d" % n)
+        xyz2data(
+                 atom,
+                 vacuum_layer = 10,
+                 filename = 'slab.data',
+                 slab = True,
+                 qO = -0.82,
+                 )
+
+        atom_order_str = []
+        atom_order_copy = atom_order.copy()
+        for s in atom_order_copy:
+            if all(a.symbol != s for a in atom):
+                atom_order_copy.remove(s)
+        for a in atom_order_copy:
+            atom_order_str.append(atom_elem_to_num[a])
+        atom_order_str = ' '.join(map(str, atom_order_str))
+                    
+        if n == 0:
+            print('yes')
+            L.command("read_data slab.data")
+            L.command("pair_style quip")""")
+            f.write(f"L.command(\"pair_coeff * * {model_path} \"{model_label}\" {{}}\".format(atom_order_str))")
+            f.write("""
+        else:
+            L.command("reset_timestep 0")
+            L.command("read_data slab.data add append")
+        L.command("thermo_style custom step press cpu ke pe etotal temp")
+        L.command("dump dump_minimization all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz q")
+        L.command("thermo 1")
+        L.command("min_style cg")
+        L.command("minimize 1e-10 1e-12 1000 1000000")
+        L.command("undump dump_minimization")
+        L.command("delete_atoms group all")
+        
+        images = read("md.lammpstrj", ":")
+        traj = TrajectoryWriter("opt.traj", "a")
+    
+        file_name = glob.glob("../log.lammps")[0]
+        e_pot = lammps_energy(file_name)
+    
+        print(len(e_pot))
+    
+        f_all = []
+        for a in images:
+            f = a.get_forces()
+            f_all.append(f)
+    
+        for i, a in enumerate(images):
+            an = a.get_atomic_numbers()
+""")
+    
+            for ind, atom in enumerate(atom_order):
+                f.write(
+                    f"        an = [{atom_elem_to_num[atom]} if x == {ind+1} else x for x in an]\n"
+                )
+            f.write("""
+            a.set_atomic_numbers(an)
+            traj.write(a, energy=e_pot[i], forces=f_all[i])
+    
+        a = read("opt.traj@-1")
+        e = a.get_potential_energy()
+        f = a.get_forces()
+        pos = a.get_positions()
+        posz = pos[:, 2]
+        posz_mid = np.average(posz)
+        
+        ndx = np.where(posz < posz_mid)[0]
+        c = FixAtoms(ndx)
+        a.set_constraint(c)
+        a.set_calculator(SPC(a, energy=e, forces=f))
+        a.write("optimized.traj")
+
+        os.chdir("..")
+
+main()""")
+
+    else:
+        with open("opt.py", "w") as f:
+            f.write("""import re
 import os
 import glob
 
@@ -95,8 +224,8 @@ def main():
         file.writelines(lines)
     
 """)
-        f.write('    os.system("srun {} -in in.opt > out")\n'.format(lammps_loc))
-        f.write("""
+            f.write('    os.system("srun {} -in in.opt > out")\n'.format(lammps_loc))
+            f.write("""
     images = read("md.lammpstrj", ":")
     traj = TrajectoryWriter("opt.traj", "a")
 
@@ -114,11 +243,11 @@ def main():
         an = atoms.get_atomic_numbers()
 
 """)
-        for ind, atom in enumerate(atom_order):
-            f.write(
-                f"        an = [{atom_elem_to_num[atom]} if x == {ind+1} else x for x in an]\n"
-            )
-        f.write("""
+            for ind, atom in enumerate(atom_order):
+                f.write(
+                    f"        an = [{atom_elem_to_num[atom]} if x == {ind+1} else x for x in an]\n"
+                )
+            f.write("""
         atoms.set_atomic_numbers(an)
         traj.write(atoms, energy=e_pot[i], forces=f_all[i])
 
@@ -229,7 +358,7 @@ def write_optimize_sh(model_path):
         f.write("python opt.py\n")
 
 
-def run_bh(options):
+def run_bh(options, multiple=False):
     filescopied = ["opt.py"]
     name = glob.glob("input.traj")
     slab_clean = read(name[0])
@@ -256,14 +385,14 @@ def run_bh(options):
         ("H", "H"): [0.5, 10],
     }
 
-    cell = slab_clean.get_cell()
-    a = cell[0, 0]
-    b = cell[1, 0]
-    c = cell[1, 1]
-    tol = 1.5
-    boundary = np.array(
-        [[-tol, -tol], [a + tol, -tol], [a + b + tol, c + tol], [b - tol, c + tol]]
-    )
+    # cell = slab_clean.get_cell()
+    # a = cell[0, 0]
+    # b = cell[1, 0]
+    # c = cell[1, 1]
+    # tol = 1.5
+    # boundary = np.array(
+    #     [[-tol, -tol], [a + tol, -tol], [a + b + tol, c + tol], [b - tol, c + tol]]
+    # )
 
     # bond_range = {}
     # for v in itertools.product(["Zr", "O", "H"], repeat=2):
@@ -288,10 +417,10 @@ def run_bh(options):
 
     n_steps = 4000
 
-    bh_run.run(n_steps)
+    bh_run.run(n_steps, multiple)
 
 
-def main():
+def main(multiple=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("--options", type=str, default="./bh_options.json")
     args = parser.parse_args()
@@ -324,14 +453,17 @@ def main():
     posz = pos[:, 2] # gets z positions of atoms in surface
     posz_mid = np.average(posz)
 
-    write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
-    write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
-    with open("in.opt", 'r') as f:
-        content = f.read()
-    new_content = content.replace('ZZ', "{}".format(posz_mid))
-    with open("in.opt", 'w') as f:
-        f.write(new_content)
-    write_optimize_sh(model_path=model_file)
+    if multiple:
+        write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
+    else:
+        write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
+        write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
+        with open("in.opt", 'r') as f:
+            content = f.read()
+        new_content = content.replace('ZZ', "{}".format(posz_mid))
+        with open("in.opt", 'w') as f:
+            f.write(new_content)
+        write_optimize_sh(model_path=model_file)
     run_bh(options)
 
 

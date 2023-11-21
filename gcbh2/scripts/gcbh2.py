@@ -20,8 +20,9 @@ from ase.neighborlist import NeighborList, natural_cutoffs #, get_connectivity_m
 from ase.data import covalent_radii as covalent
 from ase.data import atomic_numbers, atomic_masses
 # from quippy.potential import Potential
-# from mpi4py import MPI
-from ase.calculators.lammpslib import LAMMPSlib
+from mpi4py import MPI
+from lammps import Pylammps
+# from ase.calculators.lammpslib import LAMMPSlib
 # from ase.build import molecule
 # from ase.io.trajectory import TrajectoryWriter
 
@@ -474,60 +475,116 @@ class GrandCanonicalBasinHopping(Dynamics):
             )
         self.dumplog("Current Temperature is %.2f" % self.T)
 
-    def run(self, maximum_steps=4000, maximum_trial=50):
+    def run(self, maximum_steps=4000, maximum_trial=50, multiple=False):
         """Hop the basins for defined number of steps."""
-        while self.nsteps < maximum_steps:
-            if self.no_improvement_step >= self.stop_steps:
+        if multiple:
+            while self.nsteps < maximum_steps:
+                if self.no_improvement_step >= self.stop_steps:
+                    self.dumplog(
+                        "The best solution has not "
+                        "improved for {} steps\n".format(self.no_improvement_step),
+                        highlight="#",
+                    )
+                    raise RuntimeError("The best solution is not improved for {} steps".format(self.no_improvement_step))
+                self.dumplog("-------------------------------------------------------")
+                time_label = get_current_time()
                 self.dumplog(
-                    "The best solution has not "
-                    "improved for {} steps\n".format(self.no_improvement_step),
-                    highlight="#",
+                    "%s:  Starting Basin-Hopping Step %05d\n" % (time_label, self.nsteps)
                 )
-                raise RuntimeError("The best solution is not improved for {} steps".format(self.no_improvement_step))
-            self.dumplog("-------------------------------------------------------")
-            time_label = get_current_time()
-            self.dumplog(
-                "%s:  Starting Basin-Hopping Step %05d\n" % (time_label, self.nsteps)
-            )
-
-            for number_of_trials in range(maximum_trial):
-                modifier_name = self.select_modifier()
-                self.modifier_name = modifier_name
-                try:
-                    new_atoms = self.move(modifier_name=modifier_name)
-                except (
-                    NoReasonableStructureFound
-                ) as emsg:  # emsg stands for error message
-                    if not isinstance(emsg, str):
-                        emsg = "Unknown"
-                    self.dumplog(
-                        "%s did not find a good structure because of %s"
-                        % (modifier_name, emsg)
-                    )
+                
+                for number_of_trials in range(maximum_trial):
+                    modifier_name = self.select_modifier()
+                    self.modifier_name = modifier_name
+                    try:
+                        new_atoms = []
+                        for _ in range(10):
+                            new_atoms += self.move(modifier_name=modifier_name)
+                    except (
+                        NoReasonableStructureFound
+                    ) as emsg:  # emsg stands for error message
+                        if not isinstance(emsg, str):
+                            emsg = "Unknown"
+                        self.dumplog(
+                            "%s did not find a good structure because of %s"
+                            % (modifier_name, emsg)
+                        )
+                    else:
+                        self.on_optimization = self.nsteps
+                        self.dumplog(
+                            "One structure found, begin to optimize this structure\n"
+                        )
+                        # self.log_status()
+                        self.save_current_status()  # before optimization switch on the self.on_optimization flag
+                        # self.dumplog("{}: begin structure optimization subroutine".format(get_current_time()))
+                        self.optimize(inatoms=new_atoms, multiple=True)
+                        # self.dumplog("{}: Optimization Done\n".format(get_current_time()))
+                        self.accepting_new_structures(
+                            newatoms=new_atoms, move_action=modifier_name
+                        )
+                        self.on_optimization = -1  # switch off the optimization status
+                        # self.log_status()
+                        self.save_current_status()
+                        self.nsteps += 1
+                        break
                 else:
-                    self.on_optimization = self.nsteps
+                    raise RuntimeError(
+                        "Program does not find a good structure after {} tests".format(
+                            maximum_trial
+                        )
+                    )
+        else:
+            while self.nsteps < maximum_steps:
+                if self.no_improvement_step >= self.stop_steps:
                     self.dumplog(
-                        "One structure found, begin to optimize this structure\n"
+                        "The best solution has not "
+                        "improved for {} steps\n".format(self.no_improvement_step),
+                        highlight="#",
                     )
-                    # self.log_status()
-                    self.save_current_status()  # before optimization switch on the self.on_optimization flag
-                    # self.dumplog("{}: begin structure optimization subroutine".format(get_current_time()))
-                    self.optimize(inatoms=new_atoms)
-                    # self.dumplog("{}: Optimization Done\n".format(get_current_time()))
-                    self.accepting_new_structures(
-                        newatoms=new_atoms, move_action=modifier_name
-                    )
-                    self.on_optimization = -1  # switch off the optimization status
-                    # self.log_status()
-                    self.save_current_status()
-                    self.nsteps += 1
-                    break
-            else:
-                raise RuntimeError(
-                    "Program does not find a good structure after {} tests".format(
-                        maximum_trial
-                    )
+                    raise RuntimeError("The best solution is not improved for {} steps".format(self.no_improvement_step))
+                self.dumplog("-------------------------------------------------------")
+                time_label = get_current_time()
+                self.dumplog(
+                    "%s:  Starting Basin-Hopping Step %05d\n" % (time_label, self.nsteps)
                 )
+    
+                for number_of_trials in range(maximum_trial):
+                    modifier_name = self.select_modifier()
+                    self.modifier_name = modifier_name
+                    try:
+                        new_atoms = self.move(modifier_name=modifier_name)
+                    except (
+                        NoReasonableStructureFound
+                    ) as emsg:  # emsg stands for error message
+                        if not isinstance(emsg, str):
+                            emsg = "Unknown"
+                        self.dumplog(
+                            "%s did not find a good structure because of %s"
+                            % (modifier_name, emsg)
+                        )
+                    else:
+                        self.on_optimization = self.nsteps
+                        self.dumplog(
+                            "One structure found, begin to optimize this structure\n"
+                        )
+                        # self.log_status()
+                        self.save_current_status()  # before optimization switch on the self.on_optimization flag
+                        # self.dumplog("{}: begin structure optimization subroutine".format(get_current_time()))
+                        self.optimize(inatoms=new_atoms)
+                        # self.dumplog("{}: Optimization Done\n".format(get_current_time()))
+                        self.accepting_new_structures(
+                            newatoms=new_atoms, move_action=modifier_name
+                        )
+                        self.on_optimization = -1  # switch off the optimization status
+                        # self.log_status()
+                        self.save_current_status()
+                        self.nsteps += 1
+                        break
+                else:
+                    raise RuntimeError(
+                        "Program does not find a good structure after {} tests".format(
+                            maximum_trial
+                        )
+                    )
 
     # def natural_cutoffs(self, atoms, multiplier=1.1):
     #     """Generate a neighbor list cutoff for every atom"""
@@ -623,7 +680,6 @@ class GrandCanonicalBasinHopping(Dynamics):
         self.dumplog("-------------------------------------------------------")
     
     def optimize_script(self, inatoms=None):
-        from ase.optimize import BFGS
         atoms = inatoms.copy()
         atoms.pbc = True
         pos = atoms.get_positions()
@@ -636,6 +692,10 @@ class GrandCanonicalBasinHopping(Dynamics):
             for e in uniq_elements:
                 el.append(self.elements[e])
             self.el = ' '.join(map(str, np.sort(el)[::-1]))
+            mass = []
+            for e in np.sort(el)[::-1]:
+                mass.append(atomic_masses[e])
+            self.mass = ' '.join(map(str, mass))
             self.cmds = ['pair_style quip',
                          'pair_coeff * * {} "Potential xml_label={}" {}'.format(self.model_file, self.model_label, self.el),
                          'region slab block EDGE EDGE EDGE EDGE 0 {}'.format(posz_mid),
@@ -646,6 +706,14 @@ class GrandCanonicalBasinHopping(Dynamics):
                          'thermo_style custom step fmax press cpu ke pe etotal temp',
                          'min_style cg',
                          'minimize 0.0 1.0e-4 200 1000000',]
+            cmds = ['mass 1 91.224', 'mass 2 15.999',
+        'pair_style quip',
+        'pair_coeff * * /pscratch/sd/y/yhlee/CuPd/gap/GAP_V4/md/../gap.xml "Potential xml_label=GAP_2023_11_19_-480_16_37_9_826" 40 8',
+        'dump 1 all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz',
+        'thermo 1',
+        'thermo_style custom step fmax press cpu ke pe etotal temp',
+        'min_style cg',
+        'minimize 0.0 1.0e-4 200 1000000']
             self.lammps = LAMMPSlib(lmpcmds=self.cmds, log_file='out')
         else:
             el = []
@@ -687,77 +755,146 @@ class GrandCanonicalBasinHopping(Dynamics):
         atoms.write("optimized.traj")
         # return atoms
 
-    def optimize(self, inatoms=None, restart=False):
+    def optimize(self, inatoms=None, restart=False, multiple=False):
         self.dumplog(
             "{}: begin structure optimization subroutine at step {}".format(
                 get_current_time(), self.nsteps
             )
         )
-        atoms = inatoms.copy()
-        opt_dir = self.opt_folder
-        steps = self.nsteps
-        script = self.bash_script
-        copied_files = self.copied_files[:]
-        topdir = os.getcwd()
-        subdir = os.path.join(topdir, opt_dir, "opt_%05d" % steps)
-        if restart:
-            assert os.path.isdir(subdir)
-        else:
-            if not os.path.isdir(subdir):
-                os.makedirs(subdir)
-            # prepare all the files in the subfolders
-            if script not in copied_files and not self.model_file:
-                copied_files.append(script)
-            for fn in copied_files:
-                assert os.path.isfile(fn)
-                shutil.copy(os.path.join(topdir, fn), os.path.join(subdir, fn))
-            write(os.path.join(subdir, "input.traj"), atoms)
-        try:
-            os.chdir(subdir)
-            if not self.model_file:
-                opt_job = subprocess.Popen(["bash", script], cwd=subdir)
-                opt_job.wait()
-                if opt_job.returncode < 0:
-                    sys.stderr.write(
-                        "optimization does not terminate properly at {}".format(subdir)
-                    )
-                    sys.exit(1)
+        if multiple:
+            atoms = inatoms.copy()
+            opt_dir = self.opt_folder
+            steps = self.nsteps
+            script = self.bash_script
+            copied_files = self.copied_files[:]
+            topdir = os.getcwd()
+            subdir = os.path.join(topdir, opt_dir, "opt_%05d" % steps)
+            if restart:
+                assert os.path.isdir(subdir)
             else:
-                self.optimize_script(atoms)
-        except:
-            raise RuntimeError(
-                "some error encountered at folder {} during optimizations".format(
-                    subdir
+                if not os.path.isdir(subdir):
+                    os.makedirs(subdir)
+                # prepare all the files in the subfolders
+                if script not in copied_files and not self.model_file:
+                    copied_files.append(script)
+                for fn in copied_files:
+                    assert os.path.isfile(fn)
+                    shutil.copy(os.path.join(topdir, fn), os.path.join(subdir, fn))
+                for n, atom in enumerate(atoms):
+                    os.makedirs("%02d" % n)
+                    write(os.path.join(subdir, "%02d" % n, "input.traj"), atom)
+            try:
+                os.chdir(subdir)
+                if not self.model_file:
+                    opt_job = subprocess.Popen(["bash", script], cwd=subdir)
+                    opt_job.wait()
+                    if opt_job.returncode < 0:
+                        sys.stderr.write(
+                            "optimization does not terminate properly at {}".format(subdir)
+                        )
+                        sys.exit(1)
+                else:
+                    self.optimize_script(atoms)
+            except:
+                raise RuntimeError(
+                    "some error encountered at folder {} during optimizations".format(
+                        subdir
+                    )
                 )
-            )
+            else:
+                fn = os.path.join(subdir, "optimized.traj")
+                assert os.path.isfile(fn)
+                optimized_atoms = read(fn)
+            finally:
+                os.chdir(topdir)
+    
+            e = optimized_atoms.get_potential_energy()
+            f = optimized_atoms.get_forces()
+            # set new positions for atoms
+            # constraints_list = []
+            # # all the FixAtoms constraints and Hookean constraints are passed over
+            # for c in optimized_atoms.constraints:
+            #     if isinstance(c, FixAtoms):
+            #         constraints_list.append(c)
+            #     elif isinstance(c, Hookean):
+            #         constraints_list.append(c)
+            cell = optimized_atoms.get_cell()
+            pbc = optimized_atoms.get_pbc()
+            inatoms.set_constraint()
+            del inatoms[range(inatoms.get_global_number_of_atoms())]
+            inatoms.extend(optimized_atoms)
+            inatoms.set_pbc(pbc)
+            inatoms.set_cell(cell)
+            inatoms.set_constraint(optimized_atoms.constraints)
+            spc = SinglePointCalculator(inatoms, energy=e, forces=f)
+            inatoms.set_calculator(spc)
+            self.dumplog("{}: Optimization Done\n".format(get_current_time()))            
         else:
-            fn = os.path.join(subdir, "optimized.traj")
-            assert os.path.isfile(fn)
-            optimized_atoms = read(fn)
-        finally:
-            os.chdir(topdir)
-
-        e = optimized_atoms.get_potential_energy()
-        f = optimized_atoms.get_forces()
-        # set new positions for atoms
-        # constraints_list = []
-        # # all the FixAtoms constraints and Hookean constraints are passed over
-        # for c in optimized_atoms.constraints:
-        #     if isinstance(c, FixAtoms):
-        #         constraints_list.append(c)
-        #     elif isinstance(c, Hookean):
-        #         constraints_list.append(c)
-        cell = optimized_atoms.get_cell()
-        pbc = optimized_atoms.get_pbc()
-        inatoms.set_constraint()
-        del inatoms[range(inatoms.get_global_number_of_atoms())]
-        inatoms.extend(optimized_atoms)
-        inatoms.set_pbc(pbc)
-        inatoms.set_cell(cell)
-        inatoms.set_constraint(optimized_atoms.constraints)
-        spc = SinglePointCalculator(inatoms, energy=e, forces=f)
-        inatoms.set_calculator(spc)
-        self.dumplog("{}: Optimization Done\n".format(get_current_time()))
+            atoms = inatoms.copy()
+            opt_dir = self.opt_folder
+            steps = self.nsteps
+            script = self.bash_script
+            copied_files = self.copied_files[:]
+            topdir = os.getcwd()
+            subdir = os.path.join(topdir, opt_dir, "opt_%05d" % steps)
+            if restart:
+                assert os.path.isdir(subdir)
+            else:
+                if not os.path.isdir(subdir):
+                    os.makedirs(subdir)
+                # prepare all the files in the subfolders
+                if script not in copied_files and not self.model_file:
+                    copied_files.append(script)
+                for fn in copied_files:
+                    assert os.path.isfile(fn)
+                    shutil.copy(os.path.join(topdir, fn), os.path.join(subdir, fn))
+                write(os.path.join(subdir, "input.traj"), atoms)
+            try:
+                os.chdir(subdir)
+                if not self.model_file:
+                    opt_job = subprocess.Popen(["bash", script], cwd=subdir)
+                    opt_job.wait()
+                    if opt_job.returncode < 0:
+                        sys.stderr.write(
+                            "optimization does not terminate properly at {}".format(subdir)
+                        )
+                        sys.exit(1)
+                else:
+                    self.optimize_script(atoms)
+            except:
+                raise RuntimeError(
+                    "some error encountered at folder {} during optimizations".format(
+                        subdir
+                    )
+                )
+            else:
+                fn = os.path.join(subdir, "optimized.traj")
+                assert os.path.isfile(fn)
+                optimized_atoms = read(fn)
+            finally:
+                os.chdir(topdir)
+    
+            e = optimized_atoms.get_potential_energy()
+            f = optimized_atoms.get_forces()
+            # set new positions for atoms
+            # constraints_list = []
+            # # all the FixAtoms constraints and Hookean constraints are passed over
+            # for c in optimized_atoms.constraints:
+            #     if isinstance(c, FixAtoms):
+            #         constraints_list.append(c)
+            #     elif isinstance(c, Hookean):
+            #         constraints_list.append(c)
+            cell = optimized_atoms.get_cell()
+            pbc = optimized_atoms.get_pbc()
+            inatoms.set_constraint()
+            del inatoms[range(inatoms.get_global_number_of_atoms())]
+            inatoms.extend(optimized_atoms)
+            inatoms.set_pbc(pbc)
+            inatoms.set_cell(cell)
+            inatoms.set_constraint(optimized_atoms.constraints)
+            spc = SinglePointCalculator(inatoms, energy=e, forces=f)
+            inatoms.set_calculator(spc)
+            self.dumplog("{}: Optimization Done\n".format(get_current_time()))
 
     def get_ref_potential(self, atoms=None):
         """
