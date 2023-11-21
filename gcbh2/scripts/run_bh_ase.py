@@ -473,8 +473,8 @@ def main(multiple=False):
 
     if multiple:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
-        write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
         write_optimize_sh(model_path=model_file, multiple=multiple)
+        run_bh(options, multiple=True)
     else:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
         write_lammps_input_file(model_path=model_file, model_label=model_label, atom_order=atom_order)
@@ -484,7 +484,7 @@ def main(multiple=False):
         with open("in.opt", 'w') as f:
             f.write(new_content)
         write_optimize_sh(model_path=model_file, multiple=multiple)
-    run_bh(options)
+        run_bh(options)
 
 
 main(multiple=True)
