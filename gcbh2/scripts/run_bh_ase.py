@@ -95,6 +95,10 @@ def main():
             atom_order_str.append(atom_elem_to_num[a])
         atom_order_str = ' '.join(map(str, atom_order_str))
                     
+        pos = atom.get_positions()
+        posz = pos[:, 2]
+        posz_mid = np.average(posz)
+                    
         if n == 0:
             print('yes')
             L.command("read_data slab.data")
@@ -105,11 +109,17 @@ def main():
         else:
             L.command("reset_timestep 0")
             L.command("read_data slab.data add append")
+
+        """)
+            f.write("L.command(\"region slab block EDGE EDGE EDGE EDGE 0 {{}}\".format(posz_mid))")
+            f.write("""
+        L.command("group fixed_slab region slab")
+        L.command("fix freeze fixed_slab setforce 0.0 0.0 0.0")
         L.command("thermo_style custom step press cpu ke pe etotal temp")
         L.command("dump dump_minimization all custom 1 md.lammpstrj id type x y z vx vy vz fx fy fz q")
         L.command("thermo 1")
         L.command("min_style cg")
-        L.command("minimize 1e-10 1e-12 1000 1000000")
+        L.command("minimize 0.0 1.0e-4 200 1000000")
         L.command("undump dump_minimization")
         L.command("delete_atoms group all")
         

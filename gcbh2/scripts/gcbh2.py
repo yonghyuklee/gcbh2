@@ -516,7 +516,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                         # self.log_status()
                         self.save_current_status()  # before optimization switch on the self.on_optimization flag
                         # self.dumplog("{}: begin structure optimization subroutine".format(get_current_time()))
-                        self.optimize(inatoms=new_atoms, multiple=multiple)
+                        new_atoms = self.optimize(inatoms=new_atoms, multiple=multiple)
                         # self.dumplog("{}: Optimization Done\n".format(get_current_time()))
                         self.accepting_new_structures(
                             newatoms=new_atoms, move_action=modifier_name
@@ -808,18 +808,20 @@ class GrandCanonicalBasinHopping(Dynamics):
             #         constraints_list.append(c)
             #     elif isinstance(c, Hookean):
             #         constraints_list.append(c)
-            cell = optimized_atoms.get_cell()
-            pbc = optimized_atoms.get_pbc()
-            inatoms = inatoms[0]
-            inatoms.set_constraint()
-            del inatoms[range(inatoms.get_global_number_of_atoms())]
-            inatoms.extend(optimized_atoms)
-            inatoms.set_pbc(pbc)
-            inatoms.set_cell(cell)
-            inatoms.set_constraint(optimized_atoms.constraints)
+            # cell = optimized_atoms.get_cell()
+            # pbc = optimized_atoms.get_pbc()
+            # inatoms = inatoms[0]
+            # inatoms.set_constraint()
+            # del inatoms[range(inatoms.get_global_number_of_atoms())]
+            # inatoms.extend(optimized_atoms)
+            # inatoms.set_pbc(pbc)
+            # inatoms.set_cell(cell)
+            # inatoms.set_constraint(optimized_atoms.constraints)
+            inatoms = optimized_atoms
             spc = SinglePointCalculator(inatoms, energy=e, forces=f)
             inatoms.set_calculator(spc)
             self.dumplog("{}: Optimization Done\n".format(get_current_time()))            
+            return inatoms
         else:
             atoms = inatoms.copy()
             opt_dir = self.opt_folder
