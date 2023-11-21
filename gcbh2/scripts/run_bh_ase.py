@@ -435,7 +435,7 @@ def run_bh(options, multiple=False):
 
     n_steps = 4000
 
-    bh_run.run(n_steps, multiple)
+    bh_run.run(n_steps, multiple=multiple)
 
 
 def main(multiple=False):

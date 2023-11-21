@@ -498,7 +498,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                     try:
                         new_atoms = []
                         for _ in range(n_multiple):
-                            new_atoms += self.move(modifier_name=modifier_name)
+                            new_atoms.append(self.move(modifier_name=modifier_name))
                     except (
                         NoReasonableStructureFound
                     ) as emsg:  # emsg stands for error message
@@ -511,7 +511,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                     else:
                         self.on_optimization = self.nsteps
                         self.dumplog(
-                            "One structure found, begin to optimize this structure\n"
+                            f"{len(new_atoms)} structure found, begin to optimize this structure\n"
                         )
                         # self.log_status()
                         self.save_current_status()  # before optimization switch on the self.on_optimization flag
@@ -812,6 +812,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             #         constraints_list.append(c)
             cell = optimized_atoms.get_cell()
             pbc = optimized_atoms.get_pbc()
+            inatoms = inatoms[0]
             inatoms.set_constraint()
             del inatoms[range(inatoms.get_global_number_of_atoms())]
             inatoms.extend(optimized_atoms)
