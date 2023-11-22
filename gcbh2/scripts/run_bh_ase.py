@@ -364,7 +364,7 @@ minimize 0.0 1.0e-4 200 1000000
 
 
 def examine_unconnected_components(atoms):
-    nat_cut = natural_cutoffs(atoms, mult=1.0)
+    nat_cut = natural_cutoffs(atoms, mult=0.9)
     nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
     nl.update(atoms)
     matrix = nl.get_connectivity_matrix()
@@ -466,8 +466,9 @@ def main(multiple=False):
     if any(atom.symbol == 'He' for atom in slab_clean):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
         slab_clean.set_pbc((True,True,True))
+
     if not examine_unconnected_components(slab_clean):
-        nat_cut = natural_cutoffs(slab_clean, mult=1.0)
+        nat_cut = natural_cutoffs(slab_clean, mult=0.9)
         nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
         nl.update(slab_clean)
         matrix = nl.get_connectivity_matrix()

@@ -591,7 +591,7 @@ class GrandCanonicalBasinHopping(Dynamics):
     #     return [covalent[atom.number] * multiplier for atom in atoms]
 
     def examine_unconnected_components(self, newatoms):
-        nat_cut = natural_cutoffs(newatoms, mult=1.0)
+        nat_cut = natural_cutoffs(newatoms, mult=0.9)
         nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
         nl.update(newatoms)
         matrix = nl.get_connectivity_matrix()
