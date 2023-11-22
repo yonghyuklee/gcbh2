@@ -104,14 +104,13 @@ def main():
             L.command("read_data slab.data")
             L.command("pair_style quip")
             """)
-            f.write(f"L.command(\"pair_coeff * * {model_path} '{model_label}' {{}}\".format(atom_order_str))")
+            f.write(f"L.command(\"pair_coeff * * {model_path} '{model_label}' {{}}\".format(atom_order_str))\n")
             f.write("""
         else:
             L.command("reset_timestep 0")
             L.command("read_data slab.data add append")
-
         """)
-            f.write("L.command(\"region slab block EDGE EDGE EDGE EDGE 0 {{}}\".format(posz_mid))")
+            f.write("L.command(\"region slab block EDGE EDGE EDGE EDGE 0 {}\".format(posz_mid))")
             f.write("""
         L.command("group fixed_slab region slab")
         L.command("fix freeze fixed_slab setforce 0.0 0.0 0.0")
@@ -122,6 +121,9 @@ def main():
         L.command("minimize 0.0 1.0e-4 200 1000000")
         L.command("undump dump_minimization")
         L.command("delete_atoms group all")
+        L.command("unfix freeze")
+        L.command("group fixed_slab delete")
+        L.command("region slab delete")
         
         images = read("md.lammpstrj", ":")
         traj = TrajectoryWriter("opt.traj", "a")
