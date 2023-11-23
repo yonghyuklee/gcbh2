@@ -100,7 +100,7 @@ def main():
         posz_mid = np.average(posz)
                     
         if n == 0:
-            print('yes')
+            # print('yes')
             L.command("read_data slab.data")
             L.command("pair_style quip")
             """)
@@ -124,6 +124,8 @@ def main():
         L.command("unfix freeze")
         L.command("group fixed_slab delete")
         L.command("region slab delete")
+        
+        os.system("sleep 1")
         
         images = read("md.lammpstrj", ":")
         traj = TrajectoryWriter("opt.traj", "a")
@@ -150,6 +152,7 @@ def main():
             a.set_atomic_numbers(an)
             traj.write(a, energy=e_pot[i], forces=f_all[i])
     
+        os.system("sleep 1")
         a = read("opt.traj@-1")
         e = a.get_potential_energy()
         f = a.get_forces()
@@ -382,7 +385,7 @@ def write_optimize_sh(model_path, multiple=False):
         # f.write("cp {} .\n".format(model_path))
         f.write(f"cp {pwd}/opt.py .\n")
         if multiple:
-            f.write("srun python opt.py\n")
+            f.write("srun python opt.py > out\n")
         else:
             f.write(f"cp {pwd}/in.opt .\n")
             f.write("python opt.py\n")
