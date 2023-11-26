@@ -367,8 +367,8 @@ minimize 0.0 1.0e-4 200 1000000
 
 
 def examine_unconnected_components(atoms):
-    nat_cut = natural_cutoffs(atoms, mult=0.8)
-    nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
+    nat_cut = natural_cutoffs(atoms, mult=1.2)
+    nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
     nl.update(atoms)
     matrix = nl.get_connectivity_matrix()
     n_components, component_list = sparse.csgraph.connected_components(matrix)
@@ -471,8 +471,8 @@ def main(multiple=False):
         slab_clean.set_pbc((True,True,True))
 
     if not examine_unconnected_components(slab_clean):
-        nat_cut = natural_cutoffs(slab_clean, mult=0.8)
-        nl = NeighborList(nat_cut, self_interaction=False, bothways=True)
+        nat_cut = natural_cutoffs(slab_clean, mult=1.2)
+        nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
         nl.update(slab_clean)
         matrix = nl.get_connectivity_matrix()
         n_components, component_list = sparse.csgraph.connected_components(matrix)
