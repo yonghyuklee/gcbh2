@@ -12,7 +12,7 @@ from scipy import sparse
 from ase.io import read, write
 from ase.neighborlist import NeighborList, natural_cutoffs
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O, add_OH#, rand_clustering, mirror_mutate
+from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O, add_OH, cluster_random_perturbation, cluster_random_displacement
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
 elements = {
@@ -416,6 +416,15 @@ def run_bh(options, multiple=False):
         ("O", "O"): [0.8, 10],
         ("O", "H"): [0.8, 10],
         ("H", "H"): [0.5, 10],
+        ("Zr", "Cu"): [2.0, 10],
+        ("Zr", "Pd"): [2.0, 10],
+        ("O", "Cu"): [1.4, 10],
+        ("O", "Pd"): [1.4, 10],
+        ("H", "Cu"): [1.0, 10],
+        ("H", "Pd"): [1.0, 10],
+        ("Cu", "Cu"): [2.0, 10],
+        ("Cu", "Pd"): [2.0, 10],
+        ("Pd", "Pd"): [2.0, 10],
     }
 
     # cell = slab_clean.get_cell()
@@ -447,6 +456,8 @@ def run_bh(options, multiple=False):
     bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
+    bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], bond_range=bond_range, max_trial=500, weight=1.5)
+    bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], bond_range=bond_range, max_trial=500, weight=1.5)
 
     n_steps = 4000
 
