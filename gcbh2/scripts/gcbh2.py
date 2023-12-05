@@ -475,7 +475,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             )
         self.dumplog("Current Temperature is %.2f" % self.T)
 
-    def run(self, maximum_steps=4000, maximum_trial=50, multiple=False, n_multiple=10):
+    def run(self, maximum_steps=4000, maximum_trial=50, multiple=False, n_multiple=20):
         """Hop the basins for defined number of steps."""
         if multiple:
             while self.nsteps < maximum_steps:
