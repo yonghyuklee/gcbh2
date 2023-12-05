@@ -19,7 +19,26 @@ elements = {
             1 : 40,
             2 : 8,
             3 : 1,
+            4 : 29,
+            5 : 46,
             }
+bond_range = {
+              ("Zr", "Zr"): [1.0, 10],
+              ("Zr", "O"): [1.0, 10],
+              ("Zr", "H"): [1.0, 10],
+              ("O", "O"): [0.8, 10],
+              ("O", "H"): [0.8, 10],
+              ("H", "H"): [0.5, 10],
+              ("Zr", "Cu"): [2.0, 10],
+              ("Zr", "Pd"): [2.0, 10],
+              ("O", "Cu"): [1.4, 10],
+              ("O", "Pd"): [1.4, 10],
+              ("H", "Cu"): [1.0, 10],
+              ("H", "Pd"): [1.0, 10],
+              ("Cu", "Cu"): [2.0, 10],
+              ("Cu", "Pd"): [2.0, 10],
+              ("Pd", "Pd"): [2.0, 10],
+             }
 
 
 def write_opt_file(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False):
@@ -43,8 +62,8 @@ from lammps import PyLammps
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
-atom_order = ["Zr", "O", "H"]
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
+atom_order = ["Zr", "O", "H", "Cu", "Pd"]
 
 def lammps_energy(
                   logfile,
@@ -88,9 +107,9 @@ def main():
 
         atom_order_str = []
         atom_order_copy = atom_order.copy()
-        for s in atom_order_copy:
-            if all(a.symbol != s for a in atom):
-                atom_order_copy.remove(s)
+#        for s in atom_order_copy:
+#            if all(a.symbol != s for a in atom):
+#                atom_order_copy.remove(s)
         for a in atom_order_copy:
             atom_order_str.append(atom_elem_to_num[a])
         atom_order_str = ' '.join(map(str, atom_order_str))
@@ -200,8 +219,9 @@ from xyz2data import *
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
-atom_order = ["Zr", "O", "H"]
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
+atom_order = ["Zr", "O", "H", "Cu", "Pd"]
+
                  
 def lammps_energy(
                   logfile,
@@ -409,24 +429,6 @@ def run_bh(options, multiple=False):
         # elements=atom_elem_to_num,
     )
 
-    bond_range = {
-        ("Zr", "Zr"): [1.0, 10],
-        ("Zr", "O"): [1.0, 10],
-        ("Zr", "H"): [1.0, 10],
-        ("O", "O"): [0.8, 10],
-        ("O", "H"): [0.8, 10],
-        ("H", "H"): [0.5, 10],
-        ("Zr", "Cu"): [2.0, 10],
-        ("Zr", "Pd"): [2.0, 10],
-        ("O", "Cu"): [1.4, 10],
-        ("O", "Pd"): [1.4, 10],
-        ("H", "Cu"): [1.0, 10],
-        ("H", "Pd"): [1.0, 10],
-        ("Cu", "Cu"): [2.0, 10],
-        ("Cu", "Pd"): [2.0, 10],
-        ("Pd", "Pd"): [2.0, 10],
-    }
-
     # cell = slab_clean.get_cell()
     # a = cell[0, 0]
     # b = cell[1, 0]
@@ -451,13 +453,13 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(nve_n2p2, name="nve",bond_range=bond_range,  z_fix=6, N=100)
     # bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
     # bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=1.5)
-    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
-    bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
-    bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], bond_range=bond_range, max_trial=500, weight=1.5)
-    bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], bond_range=bond_range, max_trial=500, weight=1.5)
+    # bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
+    # bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
+    bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], max_trial=500, weight=1.5)
+    bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
 
     n_steps = 4000
 
@@ -493,7 +495,12 @@ def main(multiple=False):
             if c != unique[np.argmax(counts)]:
                 disconnected_atom.append(n)
         del slab_clean[disconnected_atom]
-    write("input.traj", slab_clean)
+
+    symbols = slab_clean.get_chemical_symbols()
+    at = np.unique(symbols)
+    if 'Cu' not in at and 'Pd' not in at:
+        slab_clean = add_cluster(slab_clean, element={'Cu': 1, 'Pd': 4}, bond_range=bond_range, max_trial=500)
+        write("input.traj", slab_clean)
     pos = slab_clean.get_positions()
     posz = pos[:, 2] # gets z positions of atoms in surface
     posz_mid = np.average(posz)
