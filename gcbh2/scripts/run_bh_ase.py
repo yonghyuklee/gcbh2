@@ -12,9 +12,9 @@ from scipy import sparse
 from ase.io import read, write
 from ase.neighborlist import NeighborList, natural_cutoffs
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O, add_OH, cluster_random_perturbation, cluster_random_displacement
+from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O, add_OH, add_cluster, cluster_random_perturbation, cluster_random_displacement
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40}
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
 elements = {
             1 : 40,
             2 : 8,
