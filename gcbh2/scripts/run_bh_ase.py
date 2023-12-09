@@ -12,7 +12,19 @@ from scipy import sparse
 from ase.io import read, write
 from ase.neighborlist import NeighborList, natural_cutoffs
 from gcbh2.scripts.gcbh2 import GrandCanonicalBasinHopping
-from pygcga2 import randomize_all, remove_H, remove_O, add_multiple_H, add_H, add_O, add_OH, add_cluster, cluster_random_perturbation, cluster_random_displacement
+from pygcga2 import (randomize_all,
+                     remove_H, 
+                     remove_O, 
+                     add_multiple_H, 
+                     add_H, 
+                     add_O, 
+                     add_OH, 
+                     add_cluster, 
+                     add_OH_cluster,
+                     add_H_cluster,
+                     add_O_cluster,
+                     cluster_random_perturbation, 
+                     cluster_random_displacement)
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
 elements = {
@@ -118,6 +130,8 @@ def main():
         posz = pos[:, 2]
         posz_mid = np.average(posz)
                     
+        tag_list = atom.get_tags()
+                    
         if n == 0:
             # print('yes')
             L.command("read_data slab.data")
@@ -183,6 +197,7 @@ def main():
         c = FixAtoms(ndx)
         a.set_constraint(c)
         a.set_calculator(SPC(a, energy=e, forces=f))
+        a.set_tags(tag_list)
                     
         final_atoms.append(a)
         # a.write("optimized.traj")
@@ -202,7 +217,8 @@ def main():
                     
 main()""")
 
-    else:
+
+    else: # Not multiple
         with open("opt.py", "w") as f:
             f.write("""import re
 import os
@@ -247,6 +263,7 @@ def lammps_energy(
 def main():
     atoms = read("./input.traj")
     n = len(atoms)
+    tag_list = atom.get_tags()
     xyz2data(
              atoms,
              vacuum_layer = 10,
@@ -299,6 +316,7 @@ def main():
                 )
             f.write("""
         atoms.set_atomic_numbers(an)
+        atoms.set_tags(tag_list)
         traj.write(atoms, energy=e_pot[i], forces=f_all[i])
 
     atoms = read("opt.traj@-1")
@@ -453,13 +471,28 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(nve_n2p2, name="nve",bond_range=bond_range,  z_fix=6, N=100)
     # bh_run.add_modifier(mirror_mutate, name="mirror", weight=2)
     # bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=1.5)
+
+    ## Hydroxylate surface
     # bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
     # bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
     # bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
     # bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     # bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
-    bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], max_trial=500, weight=1.5)
+
+    ## Cluster configuration
+    # bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], max_trial=500, weight=1.5)
+    # bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
+
+    ## Cluster/substrate hydroxylate
+    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_H_cluster, name="add_H_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_O_cluster, name="add_O_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_OH_cluster, name="add_OH_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
     bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
+    bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
+    bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 
     n_steps = 4000
 
@@ -469,7 +502,11 @@ def run_bh(options, multiple=False):
 def main(multiple=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("--options", type=str, default="./bh_options.json")
+    parser.add_argument("--cluster", action='store_true')
+    parser.add_argument("--n_Cu", type=int, default=5)
+    parser.add_argument("--n_Pd", type=int, default=0)
     args = parser.parse_args()
+
     with open(args.options) as f:
         options = json.load(f)
     model_file = options["model_file"]
@@ -479,10 +516,13 @@ def main(multiple=False):
 
     name = glob.glob("input.traj")
     slab_clean = read(name[0])
+
+    # Map atom species
     if any(atom.symbol == 'He' for atom in slab_clean):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
         slab_clean.set_pbc((True,True,True))
 
+    # Check if there is unconnected species around the slab
     if not examine_unconnected_components(slab_clean):
         nat_cut = natural_cutoffs(slab_clean, mult=1.2)
         nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
@@ -496,14 +536,16 @@ def main(multiple=False):
                 disconnected_atom.append(n)
         del slab_clean[disconnected_atom]
 
-    symbols = slab_clean.get_chemical_symbols()
-    at = np.unique(symbols)
-    if 'Cu' not in at and 'Pd' not in at:
-        slab_clean = add_cluster(slab_clean, element={'Cu': 1, 'Pd': 4}, bond_range=bond_range, max_trial=500)
-        write("input.traj", slab_clean)
-    pos = slab_clean.get_positions()
-    posz = pos[:, 2] # gets z positions of atoms in surface
-    posz_mid = np.average(posz)
+    # If no Cu-Pd cluster on support, add a pentamer
+    if args.cluster:
+        symbols = slab_clean.get_chemical_symbols()
+        at = np.unique(symbols)
+        if 'Cu' not in at and 'Pd' not in at:
+            slab_clean = add_cluster(slab_clean, element={'Cu': args.n_Cu, 'Pd': args.n_Pd}, bond_range=bond_range, max_trial=500)
+            write("input.traj", slab_clean)
+        pos = slab_clean.get_positions()
+        posz = pos[:, 2] # gets z positions of atoms in surface
+        posz_mid = np.average(posz)
 
     if multiple:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
