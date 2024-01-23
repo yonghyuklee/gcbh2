@@ -128,7 +128,9 @@ def main():
                     
         pos = atom.get_positions()
         posz = pos[:, 2]
-        posz_mid = np.average(posz)
+        posz_min = np.min(posz)
+        # posz_mid = np.average(posz)
+        posz_mid = posz_min + 5
                     
         tag_list = atom.get_tags()
                     
@@ -191,7 +193,7 @@ def main():
         f = a.get_forces()
         pos = a.get_positions()
         posz = pos[:, 2]
-        posz_mid = np.average(posz)
+        # posz_mid = np.average(posz)
         
         ndx = np.where(posz < posz_mid)[0]
         c = FixAtoms(ndx)
