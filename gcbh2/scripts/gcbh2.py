@@ -601,6 +601,34 @@ class GrandCanonicalBasinHopping(Dynamics):
             return True
         elif n_components > 1:
             return False
+        
+    def examine_water_molecule_presents(self, newatoms):
+        nat_cut = natural_cutoffs(newatoms, mult=0.95)
+        nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
+        nl.update(newatoms)
+        matrix = nl.get_connectivity_matrix()
+        surf_ind = []
+        for a in newatoms:
+            surf_ind.append(a.index)
+        water = []
+        for i in surf_ind:
+            if newatoms[i].symbol == 'O':
+                indices, offsets = nl.get_neighbors(i)
+                near_H = []
+                for a in indices:
+                    if newatoms[a].symbol == 'H':
+                        near_H.append(a)
+                print(near_H)
+                if len(near_H) >= 2:
+                    water.append(i)
+                    for n in near_H:
+                        water.append(n)
+
+        self.dumplog("There are {} number of water molecules in the system".format(len(water)/3))
+        if len(water) > 0:
+            return True
+        else:
+            return False
 
     def accepting_new_structures(self, newatoms=None, move_action=None):
         """This function takes care of all the accepting algorithm. I.E metropolis algorithms
@@ -618,10 +646,10 @@ class GrandCanonicalBasinHopping(Dynamics):
 
         accept = False
         modifier_weight_action = "decrease"
-        if Fn < self.free_energy and self.examine_unconnected_components(newatoms):
+        if Fn < self.free_energy and self.examine_unconnected_components(newatoms) and not self.examine_water_molecule_presents(newatoms):
             accept = True
             modifier_weight_action = "increase"
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and self.examine_unconnected_components(newatoms):
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and self.examine_unconnected_components(newatoms) and not self.examine_water_molecule_presents(newatoms):
             accept = True
 
         if move_action is not None:

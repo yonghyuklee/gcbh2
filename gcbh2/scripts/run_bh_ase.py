@@ -97,7 +97,34 @@ def lammps_energy(
                 line = lf.readline() 
         line = lf.readline()
     return energies
-                           
+
+def examine_water_molecule_presents(newatoms):
+    nat_cut = natural_cutoffs(newatoms, mult=0.95)
+    nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
+    nl.update(newatoms)
+    matrix = nl.get_connectivity_matrix()
+    surf_ind = []
+    for a in newatoms:
+        surf_ind.append(a.index)
+    water = []
+    for i in surf_ind:
+        if newatoms[i].symbol == 'O':
+            indices, offsets = nl.get_neighbors(i)
+            near_H = []
+            for a in indices:
+                if newatoms[a].symbol == 'H':
+                    near_H.append(a)
+            print(near_H)
+            if len(near_H) >= 2:
+                water.append(i)
+                for n in near_H:
+                    water.append(n)
+    print("There are {} number of water molecules in the system".format(len(water)/3))
+    if len(water) > 0:
+        return True
+    else:
+        return False
+                                  
 def main():
     L = PyLammps()
     L.command("units metal")
@@ -208,9 +235,9 @@ def main():
 
     final_atom = None
     for a in final_atoms:
-        if not final_atom:
+        if not final_atom and not examine_water_molecule_presents(a):
             final_atom = a
-        elif a.get_potential_energy() < final_atom.get_potential_energy():
+        elif a.get_potential_energy() < final_atom.get_potential_energy() and not examine_water_molecule_presents(a):
             final_atom = a
         else:
             pass
