@@ -69,6 +69,7 @@ from ase.constraints import FixAtoms
 from xyz2data import *
 from mpi4py import MPI
 from lammps import PyLammps
+from ase.neighborlist import NeighborList, natural_cutoffs
 # from pymatgen.io.lammps.data import LammpsData
 # from pymatgen.io.ase import AseAtomsAdaptor
 
