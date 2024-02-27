@@ -236,8 +236,11 @@ def main():
 
     final_atom = None
     for a in final_atoms:
-        if not final_atom and not examine_water_molecule_presents(a):
-            final_atom = a
+        if not final_atom:
+            if not examine_water_molecule_presents(a):
+                final_atom = a
+            else:
+                pass
         elif a.get_potential_energy() < final_atom.get_potential_energy() and not examine_water_molecule_presents(a):
             final_atom = a
         else:
