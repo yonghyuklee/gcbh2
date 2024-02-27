@@ -100,7 +100,7 @@ def lammps_energy(
     return energies
 
 def examine_water_molecule_presents(newatoms):
-    nat_cut = natural_cutoffs(newatoms, mult=0.95)
+    nat_cut = natural_cutoffs(newatoms, mult=1.2)
     nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
     nl.update(newatoms)
     matrix = nl.get_connectivity_matrix()
@@ -115,7 +115,7 @@ def examine_water_molecule_presents(newatoms):
             for a in indices:
                 if newatoms[a].symbol == 'H':
                     near_H.append(a)
-            print(near_H)
+            # print(near_H)
             if len(near_H) >= 2:
                 water.append(i)
                 for n in near_H:

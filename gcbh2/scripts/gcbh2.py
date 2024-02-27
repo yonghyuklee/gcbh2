@@ -603,7 +603,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             return False
         
     def examine_water_molecule_presents(self, newatoms):
-        nat_cut = natural_cutoffs(newatoms, mult=0.95)
+        nat_cut = natural_cutoffs(newatoms, mult=1.2)
         nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
         nl.update(newatoms)
         matrix = nl.get_connectivity_matrix()
