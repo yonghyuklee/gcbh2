@@ -245,6 +245,10 @@ def main():
             final_atom = a
         else:
             pass
+    
+    # if all samples have water molecule, save the last one temporary. This will not be accepted in GCBH run.
+    if not final_atom:
+        final_atom = a
 
     final_atom.write("optimized.traj")
                     
