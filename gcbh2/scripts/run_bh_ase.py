@@ -28,13 +28,14 @@ from pygcga2 import (randomize_all,
                      add_molc_on_cluster,
                      molc_random_displacement)
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
 elements = {
             1 : 40,
             2 : 8,
             3 : 1,
             4 : 29,
             5 : 46,
+            6 : 6,
             }
 bond_range = {
               ("Zr", "Zr"): [1.0, 10],
@@ -126,8 +127,8 @@ from ase.neighborlist import NeighborList, natural_cutoffs
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6}
-atom_order = ["Zr", "O", "H", "Cu", "Pd", "C"]
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
+atom_order = ["Zr", "O", "H", "Cu", "Pd", "C",]
 
 def lammps_energy(
                   logfile,
@@ -323,8 +324,8 @@ from xyz2data import *
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6}
-atom_order = ["Zr", "O", "H", "Cu", "Pd", "C"]
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
+atom_order = ["Zr", "O", "H", "Cu", "Pd", "C",]
 
                  
 def lammps_energy(
@@ -572,15 +573,15 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
 
     ## Cluster/substrate hydroxylate
-    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_H_cluster, name="add_H_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_O_cluster, name="add_O_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_OH_cluster, name="add_OH_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], tags=[1], max_trial=500, weight=1.0)
-    bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
-    bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
+    # bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(add_H_cluster, name="add_H_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(add_O_cluster, name="add_O_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(add_OH_cluster, name="add_OH_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
+    # bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], tags=[1], max_trial=500, weight=1.0)
+    # bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
+    # bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 
     bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", bond_range=bond_range, tags=[2], max_trial=500, weight=1.0)
 
@@ -651,6 +652,7 @@ def main(multiple=False):
                 write_molc("Benzene")
                 molc = read("Benzene.in")
                 slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
+            write("input.traj", slab_clean)
 
     if multiple:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
