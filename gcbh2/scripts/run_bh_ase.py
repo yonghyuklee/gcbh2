@@ -126,8 +126,8 @@ from ase.neighborlist import NeighborList, natural_cutoffs
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
-atom_order = ["Zr", "O", "H", "Cu", "Pd"]
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6}
+atom_order = ["Zr", "O", "H", "Cu", "Pd", "C"]
 
 def lammps_energy(
                   logfile,
@@ -323,8 +323,8 @@ from xyz2data import *
 
 re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
-atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
-atom_order = ["Zr", "O", "H", "Cu", "Pd"]
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6}
+atom_order = ["Zr", "O", "H", "Cu", "Pd", "C"]
 
                  
 def lammps_energy(
