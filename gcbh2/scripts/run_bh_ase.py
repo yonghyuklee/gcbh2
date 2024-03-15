@@ -24,7 +24,9 @@ from pygcga2 import (randomize_all,
                      add_H_cluster,
                      add_O_cluster,
                      cluster_random_perturbation, 
-                     cluster_random_displacement)
+                     cluster_random_displacement,
+                     add_molc_on_cluster,
+                     molc_random_displacement)
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46,}
 elements = {
@@ -50,8 +52,57 @@ bond_range = {
               ("Cu", "Cu"): [2.0, 10],
               ("Cu", "Pd"): [2.0, 10],
               ("Pd", "Pd"): [2.0, 10],
+              ("C", "Cu"): [1.0, 10],
+              ("C", "Pd"): [1.0, 10],
+              ("C", "Zr"): [1.0, 10],
+              ("C", "O"): [0.8, 10],
+              ("C", "H"): [0.8, 10],
+              ("C", "C"): [0.8, 10],
              }
 
+def write_molc(molc_type):
+    if molc_type == 'Cyclohexene':
+        with open("Cyclohexene.in", "w") as f:
+            f.write("""lattice_vector 19.2995739999999998 0.0000000000000000 0.0000000000000000
+lattice_vector 0.0000000000000000 19.9647199999999998 0.0000000000000000
+lattice_vector 0.0000000000000000 0.0000000000000000 15.0000000000000000
+atom 9.7051099999999995 11.5047800000000002 7.5000000000000000 C
+atom 11.0628200000000003 10.7611899999999991 7.5000000000000000 C
+atom 11.0628200000000003 9.2035300000000007 7.5000000000000000 C
+atom 9.7051099999999995 8.4599399999999996 7.5000000000000000 C
+atom 8.4776100000000003 9.3143600000000006 7.5000000000000000 C
+atom 8.4776100000000003 10.6503599999999992 7.5000000000000000 C
+atom 9.6528500000000008 12.1805800000000009 6.6290399999999998 H
+atom 9.6528500000000008 12.1805800000000009 8.3709600000000002 H
+atom 11.6375200000000003 11.1023700000000005 6.6282199999999998 H
+atom 11.6375200000000003 11.1023700000000005 8.3717799999999993 H
+atom 11.6375200000000003 8.8623499999999993 6.6282199999999998 H
+atom 11.6375200000000003 8.8623499999999993 8.3717799999999993 H
+atom 9.6528500000000008 7.7841399999999998 6.6290399999999998 H
+atom 9.6528500000000008 7.7841399999999998 8.3709600000000002 H
+atom 7.5217999999999998 8.7826299999999993 7.5000000000000000 H
+atom 7.5217999999999998 11.1820900000000005 7.5000000000000000 H
+                    """)
+    elif molc_type == 'Benzene':
+        with open ("Benzene.in", "w") as f:
+            f.write("""lattice_vector 19.2995739999999998 0.0000000000000000 0.0000000000000000
+lattice_vector 0.0000000000000000 19.9647199999999998 0.0000000000000000
+lattice_vector 0.0000000000000000 0.0000000000000000 15.0000000000000000
+atom 9.6497899999999994 11.3798899999999996 7.5000000000000000 C
+atom 10.8600800000000000 10.6811199999999999 7.5000000000000000 C
+atom 10.8600800000000000 9.2835999999999999 7.5000000000000000 C
+atom 9.6497899999999994 8.5848300000000002 7.5000000000000000 C
+atom 8.4395000000000007 9.2835999999999999 7.5000000000000000 C
+atom 8.4395000000000007 10.6811199999999999 7.5000000000000000 C
+atom 9.6497899999999994 12.4707299999999996 7.5000000000000000 H
+atom 11.8047799999999992 11.2265300000000003 7.5000000000000000 H
+atom 11.8047799999999992 8.7381899999999995 7.5000000000000000 H
+atom 9.6497899999999994 7.4939900000000002 7.5000000000000000 H
+atom 7.4947999999999997 8.7381899999999995 7.5000000000000000 H
+atom 7.4947999999999997 11.2265300000000003 7.5000000000000000 H
+                    """)
+    else:
+        raise RuntimeError("Molecule type unknown")
 
 def write_opt_file(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False):
     # opt.py file
@@ -527,9 +578,11 @@ def run_bh(options, multiple=False):
     bh_run.add_modifier(add_H_cluster, name="add_H_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
     bh_run.add_modifier(add_O_cluster, name="add_O_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
     bh_run.add_modifier(add_OH_cluster, name="add_OH_cluster", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
+    bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], tags=[1], max_trial=500, weight=1.0)
     bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
+
+    bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", bond_range=bond_range, tags=[2], max_trial=500, weight=1.0)
 
     n_steps = 4000
 
@@ -542,6 +595,8 @@ def main(multiple=False):
     parser.add_argument("--cluster", action='store_true')
     parser.add_argument("--n_Cu", type=int, default=5)
     parser.add_argument("--n_Pd", type=int, default=0)
+    parser.add_argument("--molc", action='store_true')
+    parser.add_argument("--molc_type", type=str, default="Cyclohexene")
     args = parser.parse_args()
 
     with open(args.options) as f:
@@ -583,6 +638,19 @@ def main(multiple=False):
         pos = slab_clean.get_positions()
         posz = pos[:, 2] # gets z positions of atoms in surface
         posz_mid = np.average(posz)
+
+    if args.molc:
+        symbols = slab_clean.get_chemical_symbols()
+        at = np.unique(symbols)
+        if 'C' not in at:
+            if args.molc_type == 'Cyclohexene':
+                write_molc("Cyclohexene")
+                molc = read("Cyclohexene.in")
+                slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
+            elif args.molc_type == 'Benzene':
+                write_molc("Benzene")
+                molc = read("Benzene.in")
+                slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
 
     if multiple:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
