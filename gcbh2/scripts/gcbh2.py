@@ -626,9 +626,9 @@ class GrandCanonicalBasinHopping(Dynamics):
 
         self.dumplog("There are {} number of water molecules in the system".format(len(water)/3))
         if len(water) > 0:
-            return True
+            return True, water
         else:
-            return False
+            return False, None
 
     def accepting_new_structures(self, newatoms=None, move_action=None):
         """This function takes care of all the accepting algorithm. I.E metropolis algorithms
@@ -646,10 +646,13 @@ class GrandCanonicalBasinHopping(Dynamics):
 
         accept = False
         modifier_weight_action = "decrease"
-        if Fn < self.free_energy and self.examine_unconnected_components(newatoms) and not self.examine_water_molecule_presents(newatoms):
+        water_presents, _ = self.examine_water_molecule_presents(newatoms)
+        # if Fn < self.free_energy and self.examine_unconnected_components(newatoms) and not water_presents:
+        if Fn < self.free_energy and not water_presents:
             accept = True
             modifier_weight_action = "increase"
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and self.examine_unconnected_components(newatoms) and not self.examine_water_molecule_presents(newatoms):
+        # elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and self.examine_unconnected_components(newatoms) and not water_presents:
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and not water_presents:
             accept = True
 
         if move_action is not None:
@@ -892,6 +895,34 @@ class GrandCanonicalBasinHopping(Dynamics):
                 fn = os.path.join(subdir, "optimized.traj")
                 assert os.path.isfile(fn)
                 optimized_atoms = read(fn)
+
+                water_presents, water = self.examine_water_molecule_presents(optimized_atoms)
+                while not water_presents:
+                    del optimized_atoms[[atom.index for atom in optimized_atoms if atom.index in water]]
+                    write(os.path.join(subdir, "input.traj"), optimized_atoms)
+                    try:
+                        if not self.model_file:
+                            opt_job = subprocess.Popen(["bash", script], cwd=subdir)
+                            opt_job.wait()
+                            if opt_job.returncode < 0:
+                                sys.stderr.write(
+                                    "optimization does not terminate properly at {}".format(subdir)
+                                )
+                                sys.exit(1)
+                        else:
+                            self.optimize_script(atoms)
+                    except:
+                        raise RuntimeError(
+                            "some error encountered at folder {} during optimizations".format(
+                                subdir
+                            )
+                        )
+                    else:
+                        fn = os.path.join(subdir, "optimized.traj")
+                        assert os.path.isfile(fn)
+                        optimized_atoms = read(fn)
+                        water_presents, water = self.examine_water_molecule_presents(optimized_atoms)
+
             finally:
                 os.chdir(topdir)
     
