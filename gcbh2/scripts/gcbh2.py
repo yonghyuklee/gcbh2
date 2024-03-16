@@ -898,6 +898,7 @@ class GrandCanonicalBasinHopping(Dynamics):
 
                 water_presents, water = self.examine_water_molecule_presents(optimized_atoms)
                 while water_presents:
+                    self.dumplog("Remove water molecules present and restart optimizations\n")
                     del optimized_atoms[[atom.index for atom in optimized_atoms if atom.index in water]]
                     write(os.path.join(subdir, "input.traj"), optimized_atoms)
                     try:
@@ -922,7 +923,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                         assert os.path.isfile(fn)
                         optimized_atoms = read(fn)
                         water_presents, water = self.examine_water_molecule_presents(optimized_atoms)
-
+                self.dumplog("No water molecule remaining\n")
             finally:
                 os.chdir(topdir)
     
