@@ -897,7 +897,7 @@ class GrandCanonicalBasinHopping(Dynamics):
                 optimized_atoms = read(fn)
 
                 water_presents, water = self.examine_water_molecule_presents(optimized_atoms)
-                while not water_presents:
+                while water_presents:
                     del optimized_atoms[[atom.index for atom in optimized_atoms if atom.index in water]]
                     write(os.path.join(subdir, "input.traj"), optimized_atoms)
                     try:
