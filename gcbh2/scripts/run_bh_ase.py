@@ -26,7 +26,8 @@ from pygcga2 import (randomize_all,
                      cluster_random_perturbation, 
                      cluster_random_displacement,
                      add_molc_on_cluster,
-                     molc_random_displacement)
+                     molc_random_displacement,
+                     examine_unconnected_components)
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
 elements = {
@@ -492,19 +493,6 @@ minimize 0.0 1.0e-4 200 1000000
 #     dyn.run(100)
 #     """
 
-
-def examine_unconnected_components(atoms):
-    nat_cut = natural_cutoffs(atoms, mult=1.2)
-    nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
-    nl.update(atoms)
-    matrix = nl.get_connectivity_matrix()
-    n_components, component_list = sparse.csgraph.connected_components(matrix)
-    if n_components == 1:
-        return True
-    elif n_components > 1:
-        return False
-    
-
 def write_optimize_sh(model_path, multiple=False):
     pwd = os.getcwd()
     with open("optimize.sh", "w") as f:
@@ -583,7 +571,7 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     # bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 
-    bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", bond_range=bond_range, tags=[2], max_trial=500, weight=1.0)
+    bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", molc=options['molc'], bond_range=bond_range, elements=['C'], max_trial=500, weight=1.0)
 
     n_steps = 4000
 
@@ -615,6 +603,14 @@ def main(multiple=False):
         slab_clean.set_atomic_numbers([elements[n] for n in slab_clean.get_atomic_numbers()])
         slab_clean.set_pbc((True,True,True))
 
+    # align slab to the bottom of the cell
+    pos = slab_clean.get_positions()
+    posz = pos[:, 2]
+    posz_min = np.min(posz)
+    dz = - posz_min + 1
+    pos[:, 2] += dz
+    slab_clean.set_positions(pos)
+
     # Check if there is unconnected species around the slab
     if not examine_unconnected_components(slab_clean):
         nat_cut = natural_cutoffs(slab_clean, mult=1.2)
@@ -629,7 +625,7 @@ def main(multiple=False):
                 disconnected_atom.append(n)
         del slab_clean[disconnected_atom]
 
-    # If no Cu-Pd cluster on support, add a pentamer
+    # If no Cu-Pd cluster on support, add a pentamer or tetramer
     if args.cluster:
         symbols = slab_clean.get_chemical_symbols()
         at = np.unique(symbols)
@@ -647,10 +643,12 @@ def main(multiple=False):
             if args.molc_type == 'Cyclohexene':
                 write_molc("Cyclohexene")
                 molc = read("Cyclohexene.in")
+                options['molc'] = molc
                 slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
             elif args.molc_type == 'Benzene':
                 write_molc("Benzene")
                 molc = read("Benzene.in")
+                options['molc'] = molc
                 slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
             write("input.traj", slab_clean)
 
