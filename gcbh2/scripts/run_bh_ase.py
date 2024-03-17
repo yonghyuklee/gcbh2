@@ -153,7 +153,7 @@ def lammps_energy(
     return energies
 
 def examine_water_molecule_presents(newatoms):
-    nat_cut = natural_cutoffs(newatoms, mult=1.2)
+    nat_cut = natural_cutoffs(newatoms, mult=1.25)
     nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
     nl.update(newatoms)
     matrix = nl.get_connectivity_matrix()
