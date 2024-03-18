@@ -106,7 +106,7 @@ atom 7.4947999999999997 11.2265300000000003 7.5000000000000000 H
     else:
         raise RuntimeError("Molecule type unknown")
 
-def write_opt_file(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False):
+def write_opt_file(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False, molc=False):
     # opt.py file
     if multiple:
         with open("opt.py", "w") as f:
@@ -123,6 +123,7 @@ from xyz2data import *
 from mpi4py import MPI
 from lammps import PyLammps
 from ase.neighborlist import NeighborList, natural_cutoffs
+from pygcga2 import examine_unconnected_components
 # from pymatgen.io.lammps.data import LammpsData
 # from pymatgen.io.ase import AseAtomsAdaptor
 
@@ -143,12 +144,15 @@ def lammps_energy(
             n = np.where(np.array(w) == 'PotEng')[0][0]
             line = lf.readline()
             while line: 
-                try:
-                    w = line.split()
-                    energies.append([float(a) for a in line.split()][n])
-                except:
-                    break
-                line = lf.readline() 
+                if line.startswith("WARNING"):
+                    line = lf.readline()
+                else:
+                    try:
+                        w = line.split()
+                        energies.append([float(a) for a in line.split()][n])
+                    except:
+                        break
+                    line = lf.readline() 
         line = lf.readline()
     return energies
 
@@ -189,7 +193,15 @@ def main():
     #n = len(atoms, ":")
     for n, atom in enumerate(atoms):
         os.makedirs("%02d" % n, exist_ok=True)
-        os.chdir("%02d" % n)
+        os.chdir("%02d" % n)""")
+        #     if molc:
+        #         f.write("""
+        # molc = []
+        # for a in atom:
+        #     if a.tag == 2:
+        #         molc.append(a.index)
+        #             """)
+            f.write("""
         xyz2data(
                  atom,
                  vacuum_layer = 10,
@@ -236,10 +248,10 @@ def main():
         L.command("min_style cg")
         L.command("minimize 0.0 1.0e-4 200 1000000")
         L.command("undump dump_minimization")
-        L.command("delete_atoms group all")
         L.command("unfix freeze")
         L.command("group fixed_slab delete")
         L.command("region slab delete")
+        L.command("delete_atoms group all")
         
         os.system("sleep 1")
         
@@ -289,12 +301,19 @@ def main():
 
     final_atom = None
     for a in final_atoms:
+        connected, n_components = examine_unconnected_components(a)
         if not final_atom:
-            if not examine_water_molecule_presents(a):
+            if not examine_water_molecule_presents(a) and connected:
+                final_atom = a
+            elif not examine_water_molecule_presents(a) and n_components <= 2:
+                print(f"WARNING: The final structure has {n_components} components")
                 final_atom = a
             else:
                 pass
-        elif a.get_potential_energy() < final_atom.get_potential_energy() and not examine_water_molecule_presents(a):
+        elif a.get_potential_energy() < final_atom.get_potential_energy() and not examine_water_molecule_presents(a) and connected:
+            final_atom = a
+        elif a.get_potential_energy() < final_atom.get_potential_energy() and not examine_water_molecule_presents(a) and n_components <= 2:
+            print(f"WARNING: The final structure has {n_components} components")
             final_atom = a
         else:
             pass
@@ -612,7 +631,8 @@ def main(multiple=False):
     slab_clean.set_positions(pos)
 
     # Check if there is unconnected species around the slab
-    if not examine_unconnected_components(slab_clean):
+    connected, n_components = examine_unconnected_components(slab_clean)
+    if not connected:
         nat_cut = natural_cutoffs(slab_clean, mult=1.2)
         nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
         nl.update(slab_clean)

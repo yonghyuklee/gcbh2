@@ -598,9 +598,9 @@ class GrandCanonicalBasinHopping(Dynamics):
         n_components, component_list = sparse.csgraph.connected_components(matrix)
         self.dumplog("There are {} components in the system".format(n_components))
         if n_components == 1:
-            return True
+            return True, n_components
         elif n_components > 1:
-            return False
+            return False, n_components
         
     def examine_water_molecule_presents(self, newatoms):
         nat_cut = natural_cutoffs(newatoms, mult=1.25)
@@ -647,12 +647,18 @@ class GrandCanonicalBasinHopping(Dynamics):
         accept = False
         modifier_weight_action = "decrease"
         water_presents, _ = self.examine_water_molecule_presents(newatoms)
-        # if Fn < self.free_energy and self.examine_unconnected_components(newatoms) and not water_presents:
-        if Fn < self.free_energy and not water_presents:
+        connected, n_components = self.examine_unconnected_components(newatoms)
+        if Fn < self.free_energy and connected and not water_presents:
             accept = True
             modifier_weight_action = "increase"
-        # elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and self.examine_unconnected_components(newatoms) and not water_presents:
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and not water_presents:
+        elif Fn < self.free_energy and n_components <= 2 and not water_presents:
+            self.dumplog("There are {} number of components in the system\n" % n_components)
+            accept = True
+            modifier_weight_action = "increase"
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected and not water_presents:
+            accept = True
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2 and not water_presents:
+            self.dumplog("There are {} number of components in the system\n" % n_components)
             accept = True
 
         if move_action is not None:
@@ -669,8 +675,8 @@ class GrandCanonicalBasinHopping(Dynamics):
         else:
             _int_accept = 0
             self.dumplog("Rejected, F(old)=%.3f F(new)=%.3f\n" % (self.free_energy, Fn))
-            if not self.examine_unconnected_components(newatoms):
-                self.dumplog("Some atoms have migrated out of the surface.")
+            if not connected:
+                self.dumplog("{} atoms have migrated out of the surface." % n_components)
             self.rejected_steps += 1
 
         if accept:
