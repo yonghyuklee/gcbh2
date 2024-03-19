@@ -646,18 +646,22 @@ class GrandCanonicalBasinHopping(Dynamics):
 
         accept = False
         modifier_weight_action = "decrease"
-        water_presents, _ = self.examine_water_molecule_presents(newatoms)
+        # water_presents, _ = self.examine_water_molecule_presents(newatoms)
         connected, n_components = self.examine_unconnected_components(newatoms)
-        if Fn < self.free_energy and connected and not water_presents:
+        # if Fn < self.free_energy and connected and not water_presents:
+        if Fn < self.free_energy and connected:
             accept = True
             modifier_weight_action = "increase"
-        elif Fn < self.free_energy and n_components <= 2 and not water_presents:
+        # elif Fn < self.free_energy and n_components <= 2 and not water_presents:
+        elif Fn < self.free_energy and n_components <= 2:
             self.dumplog("There are {} number of components in the system\n" % n_components)
             accept = True
             modifier_weight_action = "increase"
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected and not water_presents:
+        # elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected and not water_presents:
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected:
             accept = True
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2 and not water_presents:
+        # elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2 and not water_presents:
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2:
             self.dumplog("There are {} number of components in the system\n" % n_components)
             accept = True
 
