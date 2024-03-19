@@ -590,7 +590,7 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     # bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 
-    bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", molc=options['molc'], bond_range=bond_range, elements=['C'], max_trial=500, weight=1.0)
+    bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", molc=options['molc'], bond_range=bond_range, elements=['C'], max_trial=50, weight=1.0)
 
     n_steps = 4000
 
