@@ -660,17 +660,14 @@ def main(multiple=False):
         symbols = slab_clean.get_chemical_symbols()
         at = np.unique(symbols)
         if 'C' not in at:
-            if args.molc_type == 'Cyclohexene':
-                write_molc("Cyclohexene")
-                molc = read("Cyclohexene.in")
-                options['molc'] = molc
-                slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
-            elif args.molc_type == 'Benzene':
-                write_molc("Benzene")
-                molc = read("Benzene.in")
-                options['molc'] = molc
-                slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
+            write_molc(args.molc_type)
+            molc = read("{}.in".format(args.molc_type))
+            options['molc'] = molc
+            slab_clean = add_molc_on_cluster(slab_clean, molc=molc, bond_range=bond_range, max_trial=500)
             write("input.traj", slab_clean)
+        else:
+            molc = read("{}.in".format(args.molc_type))
+            options['molc'] = molc
 
     if multiple:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
