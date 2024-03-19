@@ -660,13 +660,13 @@ class GrandCanonicalBasinHopping(Dynamics):
             accept = True
             modifier_weight_action = "increase"
         elif Fn < self.free_energy and n_components <= 2 and not water_presents:
-            self.dumplog("There are {} number of components in the system\n" % n_components)
+            self.dumplog("There are {} number of components in the system\n".format(n_components))
             accept = True
             modifier_weight_action = "increase"
         elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected and not water_presents:
             accept = True
         elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2 and not water_presents:
-            self.dumplog("There are {} number of components in the system\n" % n_components)
+            self.dumplog("There are {} number of components in the system\n".format(n_components))
             accept = True
 
         if move_action is not None:
@@ -684,7 +684,7 @@ class GrandCanonicalBasinHopping(Dynamics):
             _int_accept = 0
             self.dumplog("Rejected, F(old)=%.3f F(new)=%.3f\n" % (self.free_energy, Fn))
             if not connected:
-                self.dumplog("{} atoms have migrated out of the surface." % n_components)
+                self.dumplog("{} atoms have migrated out of the surface.".format(n_components))
             self.rejected_steps += 1
 
         if accept:
