@@ -618,11 +618,19 @@ class GrandCanonicalBasinHopping(Dynamics):
                 for a in indices:
                     if newatoms[a].symbol == 'H':
                         near_H.append(a)
-                print(near_H)
+                # print(near_H)
                 if len(near_H) >= 2:
-                    water.append(i)
+                    molc_water = True
                     for n in near_H:
-                        water.append(n)
+                        test, _ = nl.get_neighbors(n)
+                        # if H in the water molecule has a bond with carbon in molcule, neglect
+                        if any(newatoms[t].symbol == 'C' for t in test):
+                            molc_water = False
+                            pass
+                        else:
+                            water.append(n)
+                    if molc_water:
+                        water.append(i)
 
         self.dumplog("There are {} number of water molecules in the system".format(len(water)/3))
         if len(water) > 0:
@@ -646,22 +654,18 @@ class GrandCanonicalBasinHopping(Dynamics):
 
         accept = False
         modifier_weight_action = "decrease"
-        # water_presents, _ = self.examine_water_molecule_presents(newatoms)
+        water_presents, _ = self.examine_water_molecule_presents(newatoms)
         connected, n_components = self.examine_unconnected_components(newatoms)
-        # if Fn < self.free_energy and connected and not water_presents:
-        if Fn < self.free_energy and connected:
+        if Fn < self.free_energy and connected and not water_presents:
             accept = True
             modifier_weight_action = "increase"
-        # elif Fn < self.free_energy and n_components <= 2 and not water_presents:
-        elif Fn < self.free_energy and n_components <= 2:
+        elif Fn < self.free_energy and n_components <= 2 and not water_presents:
             self.dumplog("There are {} number of components in the system\n" % n_components)
             accept = True
             modifier_weight_action = "increase"
-        # elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected and not water_presents:
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected:
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and connected and not water_presents:
             accept = True
-        # elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2 and not water_presents:
-        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2:
+        elif np.random.uniform() < np.exp(-(Fn - self.free_energy) / self.T / units.kB) and n_components <= 2 and not water_presents:
             self.dumplog("There are {} number of components in the system\n" % n_components)
             accept = True
 
