@@ -538,6 +538,7 @@ def run_bh(options, multiple=False):
         files_to_copied=filescopied,
         restart=True,
         chemical_potential="chemical_potentials.dat",
+        stop_steps=20,
         # model_file=options["model_file"],
         # model_label=options["model_label"],
         # elements=atom_elem_to_num,
