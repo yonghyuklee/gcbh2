@@ -116,12 +116,14 @@ import glob
 
 from ase.io import *
 from ase.io.trajectory import TrajectoryWriter
+from ase import Atoms
 import numpy as np
 from ase.calculators.singlepoint import SinglePointCalculator as SPC
 from ase.constraints import FixAtoms
 from xyz2data import *
 from mpi4py import MPI
 from lammps import PyLammps
+from scipy import sparse
 from ase.neighborlist import NeighborList, natural_cutoffs
 from pygcga2 import examine_unconnected_components
 # from pymatgen.io.lammps.data import LammpsData
@@ -131,7 +133,7 @@ re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
 atom_order = ["Zr", "O", "H", "Cu", "Pd", "C",]
-                    """)
+""")
             if molc:
                 f.write(f"molc = {molc}\n")
             f.write("""
