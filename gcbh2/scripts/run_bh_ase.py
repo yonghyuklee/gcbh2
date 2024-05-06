@@ -125,7 +125,7 @@ from mpi4py import MPI
 from lammps import PyLammps
 from scipy import sparse
 from ase.neighborlist import NeighborList, natural_cutoffs
-from pygcga2 import examine_unconnected_components
+from pygcga2 import examine_unconnected_components, examine_isolated_H_molecule_presents
 # from pymatgen.io.lammps.data import LammpsData
 # from pymatgen.io.ase import AseAtomsAdaptor
 
@@ -307,9 +307,9 @@ def main():
     ffinal_atoms = []
     for a in final_atoms:
         connected, n_components = examine_unconnected_components(a)
-        if not examine_water_molecule_presents(a) and connected:
+        if not examine_water_molecule_presents(a) and not examine_isolated_H_molecule_presents(a) and connected:
             ffinal_atoms.append(a)
-        elif not examine_water_molecule_presents(a) and n_components <= 2:
+        elif not examine_water_molecule_presents(a) and not examine_isolated_H_molecule_presents(a) and n_components <= 2:
             if molc:
                 nat_cut = natural_cutoffs(a, mult=1.2)
                 nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
