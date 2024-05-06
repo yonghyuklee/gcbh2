@@ -106,7 +106,7 @@ atom 7.4947999999999997 11.2265300000000003 7.5000000000000000 H
     else:
         raise RuntimeError("Molecule type unknown")
 
-def write_opt_file(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False, molc=False):
+def write_opt_file(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False, molc=None):
     # opt.py file
     if multiple:
         with open("opt.py", "w") as f:
@@ -299,27 +299,40 @@ def main():
 
         os.chdir("..")
 
-    final_atom = None
+    ffinal_atoms = []
     for a in final_atoms:
         connected, n_components = examine_unconnected_components(a)
-        if not final_atom:
-            if not examine_water_molecule_presents(a) and connected:
-                final_atom = a
-            elif not examine_water_molecule_presents(a) and n_components <= 2:
-                print(f"WARNING: The final structure has {n_components} components")
-                final_atom = a
+        if not examine_water_molecule_presents(a) and connected:
+            ffinal_atoms.append(a)
+        elif not examine_water_molecule_presents(a) and n_components <= 2:
+            if molc:
+                nat_cut = natural_cutoffs(a, mult=1.2)
+                nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
+                nl.update(a)
+                matrix = nl.get_connectivity_matrix()
+                _, component_list = sparse.csgraph.connected_components(matrix)
+                _, counts = np.unique(component_list, return_counts=True)
+                if np.min(counts) = len(molc):
+                    ffinal_atoms.append(a)
             else:
-                pass
-        elif a.get_potential_energy() < final_atom.get_potential_energy() and not examine_water_molecule_presents(a) and connected:
+                ffinal_atoms.append(a)
+
+    final_atom = None
+    for a in ffinal_atoms:
+        if not final_atom:
+            if n_components > 1:
+                print(f"WARNING: The final structure has {n_components} components")
             final_atom = a
-        elif a.get_potential_energy() < final_atom.get_potential_energy() and not examine_water_molecule_presents(a) and n_components <= 2:
-            print(f"WARNING: The final structure has {n_components} components")
+        elif a.get_potential_energy() < final_atom.get_potential_energy():
+            if n_components > 1:
+                print(f"WARNING: The final structure has {n_components} components")
             final_atom = a
         else:
             pass
     
     # if all samples have water molecule, save the last one temporary. This will not be accepted in GCBH run.
     if not final_atom:
+        a.set_calculator(SPC(a, energy=0, forces=f))
         final_atom = a
 
     final_atom.write("optimized.traj")
@@ -671,7 +684,10 @@ def main(multiple=False):
             options['molc'] = molc
 
     if multiple:
-        write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
+        if args.molc:
+            write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True, molc=options['molc'])
+        else:
+            write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
         write_optimize_sh(model_path=model_file, multiple=multiple)
         run_bh(options, multiple=True)
     else:
