@@ -312,7 +312,7 @@ def main():
                 matrix = nl.get_connectivity_matrix()
                 _, component_list = sparse.csgraph.connected_components(matrix)
                 _, counts = np.unique(component_list, return_counts=True)
-                if np.min(counts) = len(molc):
+                if np.min(counts) == len(molc):
                     ffinal_atoms.append(a)
             else:
                 ffinal_atoms.append(a)
