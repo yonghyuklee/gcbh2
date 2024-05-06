@@ -131,7 +131,10 @@ re_energies = re.compile(\"\"\"^\s*Step \"\"\")
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
 atom_order = ["Zr", "O", "H", "Cu", "Pd", "C",]
-
+                    """)
+            if molc:
+                f.write(f"molc = {molc}\n")
+            f.write("""
 def lammps_energy(
                   logfile,
                   ):
