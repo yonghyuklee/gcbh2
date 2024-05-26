@@ -136,6 +136,8 @@ atom_order = ["Zr", "O", "H", "Cu", "Pd", "C",]
 """)
             if molc:
                 f.write(f"molc = {molc}\n")
+            else:
+                f.write("molc = None\n")
             f.write("""
 def lammps_energy(
                   logfile,
@@ -317,7 +319,7 @@ def main():
                 matrix = nl.get_connectivity_matrix()
                 _, component_list = sparse.csgraph.connected_components(matrix)
                 _, counts = np.unique(component_list, return_counts=True)
-                if np.min(counts) == len(molc):
+                if np.min(counts) == molc:
                     ffinal_atoms.append(a)
             else:
                 ffinal_atoms.append(a)
@@ -623,7 +625,7 @@ def main(multiple=False):
     parser.add_argument("--n_Cu", type=int, default=5)
     parser.add_argument("--n_Pd", type=int, default=0)
     parser.add_argument("--molc", action='store_true')
-    parser.add_argument("--molc_type", type=str, default="Cyclohexene")
+    parser.add_argument("--molc_type", type=str)
     args = parser.parse_args()
 
     with open(args.options) as f:
@@ -650,19 +652,19 @@ def main(multiple=False):
     slab_clean.set_positions(pos)
 
     # Check if there is unconnected species around the slab
-    connected, n_components = examine_unconnected_components(slab_clean)
-    if not connected:
-        nat_cut = natural_cutoffs(slab_clean, mult=1.2)
-        nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
-        nl.update(slab_clean)
-        matrix = nl.get_connectivity_matrix()
-        n_components, component_list = sparse.csgraph.connected_components(matrix)
-        unique, counts = np.unique(component_list, return_counts=True)
-        disconnected_atom = []
-        for n, c in enumerate(component_list):
-            if c != unique[np.argmax(counts)]:
-                disconnected_atom.append(n)
-        del slab_clean[disconnected_atom]
+#    connected, n_components = examine_unconnected_components(slab_clean)
+#    if not connected:
+#        nat_cut = natural_cutoffs(slab_clean, mult=1.2)
+#        nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
+#        nl.update(slab_clean)
+#        matrix = nl.get_connectivity_matrix()
+#        n_components, component_list = sparse.csgraph.connected_components(matrix)
+#        unique, counts = np.unique(component_list, return_counts=True)
+#        disconnected_atom = []
+#        for n, c in enumerate(component_list):
+#            if c != unique[np.argmax(counts)]:
+#                disconnected_atom.append(n)
+#        del slab_clean[disconnected_atom]
 
     # If no Cu-Pd cluster on support, add a pentamer or tetramer
     if args.cluster:
@@ -690,7 +692,7 @@ def main(multiple=False):
 
     if multiple:
         if args.molc:
-            write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True, molc=options['molc'])
+            write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True, molc=len(options['molc']))
         else:
             write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
         write_optimize_sh(model_path=model_file, multiple=multiple)
