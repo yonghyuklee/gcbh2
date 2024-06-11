@@ -465,6 +465,154 @@ def main():
 main()
 """)
 
+def write_opt_file_mace(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False, molc=None):
+    # opt.py file
+    if multiple:
+        with open("opt.py", "w") as f:
+            f.write("""import os
+import numpy as np
+from scipy import sparse
+
+import ase
+from ase.io import *
+from ase.optimize import BFGS
+from ase.io.trajectory import TrajectoryWriter
+from ase import Atoms
+from ase.calculators.singlepoint import SinglePointCalculator as SPC
+from ase.constraints import FixAtoms
+
+from ase.neighborlist import NeighborList, natural_cutoffs
+from pygcga2 import examine_unconnected_components, examine_isolated_H_molecule_presents
+
+from mace.calculators import MACECalculator
+
+atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
+atom_order = ["Zr", "O", "H", "Cu", "Pd", "C",]
+""")
+            if molc:
+                f.write(f"molc = {molc}\n")
+            else:
+                f.write("molc = None\n")
+            f.write(f"calc = MACECalculator(f\"{model_path}\", device='cuda', default_dtype='float64')\n")
+            f.write("""
+def examine_water_molecule_presents(newatoms):
+    nat_cut = natural_cutoffs(newatoms, mult=1.25)
+    nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
+    nl.update(newatoms)
+    matrix = nl.get_connectivity_matrix()
+    surf_ind = []
+    for a in newatoms:
+        surf_ind.append(a.index)
+    water = []
+    for i in surf_ind:
+        if newatoms[i].symbol == 'O':
+            indices, offsets = nl.get_neighbors(i)
+            near_H = []
+            for a in indices:
+                if newatoms[a].symbol == 'H':
+                    near_H.append(a)
+            # print(near_H)
+            if len(near_H) >= 2:
+                water.append(i)
+                for n in near_H:
+                    water.append(n)
+    print("There are {} number of water molecules in the system".format(len(water)/3))
+    if len(water) > 0:
+        return True
+    else:
+        return False
+                                  
+def main():
+    atoms = read("./input.traj", ":")
+    final_atoms = []
+    
+    for n, atom in enumerate(atoms):
+        os.makedirs("%02d" % n, exist_ok=True)
+        os.chdir("%02d" % n)
+                    
+        pos = atom.get_positions()
+        posz = pos[:, 2]
+        posz_min = np.min(posz)
+        posz_mid = posz_min + 5
+
+        tag_list = atom.get_tags()
+
+        atom.calc = calc
+                    
+        dyn = BFGS(atom, log='opt.log', traj='opt.traj')
+        dyn.run(fmax=0.02)
+        
+        images = read("opt.traj", ":")
+        traj = TrajectoryWriter("final.traj", "a")
+        
+        e_pot = []
+        f_all = []
+        for a in images:
+            e = a.get_potential_energy()
+            f = a.get_forces()
+            e_pot.append(e)
+            f_all.append(f)
+    
+        for i, a in enumerate(images):
+            traj.write(a, energy=e_pot[i], forces=f_all[i])
+    
+        a = read("opt.traj@-1")
+        e = a.get_potential_energy()
+        f = a.get_forces()
+        pos = a.get_positions()
+        posz = pos[:, 2]
+        
+        ndx = np.where(posz < posz_mid)[0]
+        c = FixAtoms(ndx)
+        a.set_constraint(c)
+        a.set_calculator(SPC(a, energy=e, forces=f))
+        a.set_tags(tag_list)
+                    
+        final_atoms.append(a)
+        
+        os.chdir("..")
+
+    ffinal_atoms = []
+    for a in final_atoms:
+        connected, n_components = examine_unconnected_components(a)
+        if not examine_water_molecule_presents(a) and not examine_isolated_H_molecule_presents(a) and connected:
+            ffinal_atoms.append(a)
+        elif not examine_water_molecule_presents(a) and not examine_isolated_H_molecule_presents(a) and n_components <= 2:
+            if molc:
+                nat_cut = natural_cutoffs(a, mult=1.2)
+                nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
+                nl.update(a)
+                matrix = nl.get_connectivity_matrix()
+                _, component_list = sparse.csgraph.connected_components(matrix)
+                _, counts = np.unique(component_list, return_counts=True)
+                if np.min(counts) == molc:
+                    ffinal_atoms.append(a)
+            else:
+                ffinal_atoms.append(a)
+
+    final_atom = None
+    for a in ffinal_atoms:
+        if not final_atom:
+            if n_components > 1:
+                print(f"WARNING: The final structure has {n_components} components")
+            final_atom = a
+        elif a.get_potential_energy() < final_atom.get_potential_energy():
+            if n_components > 1:
+                print(f"WARNING: The final structure has {n_components} components")
+            final_atom = a
+        else:
+            pass
+    
+    # if all samples have water molecule, save the last one temporary. This will not be accepted in GCBH run.
+    if not final_atom:
+        a.set_calculator(SPC(a, energy=0, forces=f))
+        final_atom = a
+
+    final_atom.write("optimized.traj")
+                    
+main()
+""")
+
 
 def write_lammps_input_file(model_path, model_label, atom_order):
     """
@@ -532,14 +680,17 @@ minimize 0.0 1.0e-4 200 1000000
 #     dyn.run(100)
 #     """
 
-def write_optimize_sh(model_path, multiple=False):
+def write_optimize_sh(model_path, multiple=False, mpi=True):
     pwd = os.getcwd()
     with open("optimize.sh", "w") as f:
         f.write("pwd\n")
         # f.write("cp {} .\n".format(model_path))
         f.write(f"cp {pwd}/opt.py .\n")
         if multiple:
-            f.write("srun python opt.py > out\n")
+            if mpi:
+                f.write("srun python opt.py > out\n")
+            else:
+                f.write("python opt.py > out\n")
         else:
             f.write(f"cp {pwd}/in.opt .\n")
             f.write("python opt.py\n")
