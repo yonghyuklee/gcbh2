@@ -27,6 +27,7 @@ from pygcga2 import (randomize_all,
                      cluster_random_displacement,
                      add_molc_on_cluster,
                      molc_random_displacement,
+                     cluster_random_swap,
                      examine_unconnected_components)
 
 atom_elem_to_num = {"H": 1, "O": 8, "Zr": 40, "Cu": 29, "Pd": 46, "C": 6,}
@@ -465,7 +466,7 @@ def main():
 main()
 """)
 
-def write_opt_file_mace(atom_order, lammps_loc, model_label=None, model_path=None, multiple=False, molc=None):
+def write_opt_file_mace(model_path=None, multiple=False, molc=None):
     # opt.py file
     if multiple:
         with open("opt.py", "w") as f:
@@ -493,7 +494,7 @@ atom_order = ["Zr", "O", "H", "Cu", "Pd", "C",]
                 f.write(f"molc = {molc}\n")
             else:
                 f.write("molc = None\n")
-            f.write(f"calc = MACECalculator(f\"{model_path}\", device='cuda', default_dtype='float64')\n")
+            f.write(f"calc = MACECalculator(model_paths=f\"{model_path}\", device='cuda', default_dtype='float64')\n")
             f.write("""
 def examine_water_molecule_presents(newatoms):
     nat_cut = natural_cutoffs(newatoms, mult=1.25)
@@ -539,8 +540,8 @@ def main():
 
         atom.calc = calc
                     
-        dyn = BFGS(atom, log='opt.log', traj='opt.traj')
-        dyn.run(fmax=0.02)
+        dyn = BFGS(atom, logfile='opt.log', trajectory='opt.traj')
+        dyn.run(fmax=0.02, steps=300)
         
         images = read("opt.traj", ":")
         traj = TrajectoryWriter("final.traj", "a")
@@ -577,18 +578,6 @@ def main():
         connected, n_components = examine_unconnected_components(a)
         if not examine_water_molecule_presents(a) and not examine_isolated_H_molecule_presents(a) and connected:
             ffinal_atoms.append(a)
-        elif not examine_water_molecule_presents(a) and not examine_isolated_H_molecule_presents(a) and n_components <= 2:
-            if molc:
-                nat_cut = natural_cutoffs(a, mult=1.2)
-                nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
-                nl.update(a)
-                matrix = nl.get_connectivity_matrix()
-                _, component_list = sparse.csgraph.connected_components(matrix)
-                _, counts = np.unique(component_list, return_counts=True)
-                if np.min(counts) == molc:
-                    ffinal_atoms.append(a)
-            else:
-                ffinal_atoms.append(a)
 
     final_atom = None
     for a in ffinal_atoms:
@@ -741,11 +730,11 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=1.5)
 
     ## Hydroxylate surface
-    # bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
-    # bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
-    # bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
-    # bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
-    # bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
+    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
+    bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
+    bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 
     ## Cluster configuration
     # bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], max_trial=500, weight=1.5)
@@ -762,7 +751,7 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
     # bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 
-    bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", molc=options['molc'], bond_range=bond_range, elements=['C'], max_trial=50, weight=1.0)
+    # bh_run.add_modifier(molc_random_displacement, name="molc_random_displacement", molc=options['molc'], bond_range=bond_range, elements=['C'], max_trial=50, weight=1.0)
 
     n_steps = 4000
 
@@ -772,6 +761,8 @@ def run_bh(options, multiple=False):
 def main(multiple=False):
     parser = argparse.ArgumentParser()
     parser.add_argument("--options", type=str, default="./bh_options.json")
+    parser.add_argument("--pot", type=str, default="GAP")
+    parser.add_argument("--mpi", action='store_true')
     parser.add_argument("--cluster", action='store_true')
     parser.add_argument("--n_Cu", type=int, default=5)
     parser.add_argument("--n_Pd", type=int, default=0)
@@ -782,9 +773,12 @@ def main(multiple=False):
     with open(args.options) as f:
         options = json.load(f)
     model_file = options["model_file"]
-    model_label = options["model_label"]
-    atom_order = options["atom_order"]
-    lammps_loc = options["lammps_loc"]
+    try:
+        model_label = options["model_label"]
+        atom_order = options["atom_order"]
+        lammps_loc = options["lammps_loc"]
+    except:
+        pass
 
     name = glob.glob("input.traj")
     slab_clean = read(name[0])
@@ -803,19 +797,19 @@ def main(multiple=False):
     slab_clean.set_positions(pos)
 
     # Check if there is unconnected species around the slab
-#    connected, n_components = examine_unconnected_components(slab_clean)
-#    if not connected:
-#        nat_cut = natural_cutoffs(slab_clean, mult=1.2)
-#        nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
-#        nl.update(slab_clean)
-#        matrix = nl.get_connectivity_matrix()
-#        n_components, component_list = sparse.csgraph.connected_components(matrix)
-#        unique, counts = np.unique(component_list, return_counts=True)
-#        disconnected_atom = []
-#        for n, c in enumerate(component_list):
-#            if c != unique[np.argmax(counts)]:
-#                disconnected_atom.append(n)
-#        del slab_clean[disconnected_atom]
+    connected, n_components = examine_unconnected_components(slab_clean)
+    if not connected:
+        nat_cut = natural_cutoffs(slab_clean, mult=1.2)
+        nl = NeighborList(nat_cut, skin=0, self_interaction=False, bothways=True)
+        nl.update(slab_clean)
+        matrix = nl.get_connectivity_matrix()
+        n_components, component_list = sparse.csgraph.connected_components(matrix)
+        unique, counts = np.unique(component_list, return_counts=True)
+        disconnected_atom = []
+        for n, c in enumerate(component_list):
+            if c != unique[np.argmax(counts)]:
+                disconnected_atom.append(n)
+        del slab_clean[disconnected_atom]
 
     # If no Cu-Pd cluster on support, add a pentamer or tetramer
     if args.cluster:
@@ -843,10 +837,19 @@ def main(multiple=False):
 
     if multiple:
         if args.molc:
-            write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True, molc=len(options['molc']))
+            if args.pot == 'MACE':
+                write_opt_file_mace(model_path=model_file, multiple=True, molc=len(options['molc']))
+            elif args.pot == 'GAP':
+                write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True, molc=len(options['molc']))
         else:
-            write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
-        write_optimize_sh(model_path=model_file, multiple=multiple)
+            if args.pot == 'MACE':
+                write_opt_file_mace(model_path=model_file, multiple=True)
+            elif args.pot == 'GAP':
+                write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc, model_path=model_file, model_label=model_label, multiple=True)
+        if args.mpi:
+            write_optimize_sh(model_path=model_file, multiple=multiple, mpi=True)
+        else:
+            write_optimize_sh(model_path=model_file, multiple=multiple, mpi=False)
         run_bh(options, multiple=True)
     else:
         write_opt_file(atom_order=atom_order, lammps_loc=lammps_loc)
