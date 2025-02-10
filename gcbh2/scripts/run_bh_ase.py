@@ -569,7 +569,8 @@ def main():
         a.set_calculator(SPC(a, energy=e, forces=f))
         a.set_tags(tag_list)
                     
-        final_atoms.append(a)
+        if np.max(np.abs(a.get_forces().flatten())) <= 0.02:
+            final_atoms.append(a)
         
         os.chdir("..")
 
@@ -699,9 +700,6 @@ def run_bh(options, multiple=False):
         restart=True,
         chemical_potential="chemical_potentials.dat",
         stop_steps=20,
-        # model_file=options["model_file"],
-        # model_label=options["model_label"],
-        # elements=atom_elem_to_num,
     )
 
     # cell = slab_clean.get_cell()
@@ -730,15 +728,16 @@ def run_bh(options, multiple=False):
     # bh_run.add_modifier(add_multiple_H, name="add_multiple_H", bond_range=bond_range, max_trial=100, weight=1.5)
 
     ## Hydroxylate surface
-    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
-    bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
-    bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
+#    bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
+#    bh_run.add_modifier(add_O, name="add_O", bond_range=bond_range, max_trial=50, weight=1.5)
+#    bh_run.add_modifier(add_OH, name="add_OH", bond_range=bond_range, max_trial=50, weight=1.5)
+#    bh_run.add_modifier(remove_H, name="remove_H", weight=0.5)
+#    bh_run.add_modifier(remove_O, name="remove_O", weight=0.5)
 
     ## Cluster configuration
-    # bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], max_trial=500, weight=1.5)
-    # bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
+    bh_run.add_modifier(cluster_random_perturbation, name="cluster_random_perturbation", elements=['Cu', 'Pd'], max_trial=500, weight=1.5)
+    bh_run.add_modifier(cluster_random_displacement, name="cluster_random_displacement", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
+    # bh_run.add_modifier(cluster_random_swap, name="cluster_random_swap", elements=['Cu', 'Pd'], max_trial=500, weight=1.0)
 
     ## Cluster/substrate hydroxylate
     # bh_run.add_modifier(add_H, name="add_H", bond_range=bond_range, max_trial=50, weight=1.5)
